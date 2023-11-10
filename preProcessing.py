@@ -12,10 +12,13 @@ from tqdm import trange
 # time range: 2.1-2.8
 # trajectory length: 60
 
-train_id = np.arange(1, )
+train_start_id = 1
+train_end_id = 9001
+query_start_id = 9001
+query_end_id = 10358
 
-def preprocess(START, END, filePath, outputFilePath):
-    for id_num in range(1, 2026):#id_num
+def preprocess(START, END, filePath, outputFilePath, startid, endid):
+    for id_num in trange(startid, endid):
         file = str(id_num) + '.txt'
         f=open(filePath+file,'r')
         rawData=pd.read_csv(f,names=['id', 'timestep', 'lon', 'lat'])
@@ -48,11 +51,11 @@ def preprocess(START, END, filePath, outputFilePath):
                                 res.to_csv(f, header = None, index = False)
 
 
-def preprocess_time(START, END, filePath, outputFilePath):
+def preprocess_time(START, END, filePath, outputFilePath, startid, endid):
     for i in range(START, END):
         for j in range(24):
             data = pd.DataFrame()
-            for id_num in range(1, 2001):#id_num
+            for id_num in trange(startid, endid):
                 filePath_ = filePath + str(id_num) + '/'
                 singleFile = str(i) + '_' + str(j) + '.csv'
                 if os.path.exists(filePath_+singleFile):
@@ -71,15 +74,33 @@ def preprocess_time(START, END, filePath, outputFilePath):
 
 if __name__ == '__main__':
     START, END = 2, 9
-    filePath = '../data/seperatedData/'
-    outputFilePath = '../data/data_before/'
-    if not os.path.exists(outputFilePath):  
-        os.makedirs(outputFilePath)
-    preprocess(START, END, filePath, outputFilePath)
-    print('preProcessing Done!')
-    START, END = 2, 9
-    filePath = '../small_data/data_before/'
-    outputFilePath = '../small_data/data_before_time/'
+    # filePath = '../data/seperatedData/'
+    # outputFilePath = '../data/train_data_before/'
+    # if not os.path.exists(outputFilePath):  
+    #     os.makedirs(outputFilePath)
+    # print('preProcessing traindata...')
+    # preprocess(START, END, filePath, outputFilePath, train_start_id, train_end_id)
+    # print('preProcessing traindata Done!')
+    filePath = '../data/train_data_before/'
+    outputFilePath = '../data/train_data_before_time/'
     if not os.path.exists(outputFilePath):
         os.makedirs(outputFilePath)
-    preprocess_time(START, END, filePath, outputFilePath)
+    print('preProcessing according time...')
+    preprocess_time(START, END, filePath, outputFilePath, train_start_id, train_end_id)
+    print('preProcessing according time Done!')
+
+    # filePath = '../data/seperatedData/'
+    # outputFilePath = '../data/query_data_before/'
+    # if not os.path.exists(outputFilePath):  
+    #     os.makedirs(outputFilePath)
+    # print('preProcessing querydata...')
+    # preprocess(START, END, filePath, outputFilePath, query_start_id, query_end_id)
+    # print('preProcessing querydata Done!')
+    filePath = '../data/query_data_before/'
+    outputFilePath = '../data/query_data_before_time/'
+    if not os.path.exists(outputFilePath):
+        os.makedirs(outputFilePath)
+    print('preProcessing according time...')
+    preprocess_time(START, END, filePath, outputFilePath, query_start_id, query_end_id)
+    print('preProcessing according time Done!')
+    

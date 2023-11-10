@@ -6,6 +6,7 @@ from prepareTrainingData import findfile
 import os
 import numpy as np
 import pandas as pd
+from tqdm import trange
 
 lat1 = 39.6
 lat2 = 40.2
@@ -87,12 +88,18 @@ def prepareGridData(filePath, file, outputFilePath):
     return 0
 
 if __name__ == '__main__':
-    filePath = '../small_data/query_data_before_time/'
-    outputFilePath = '../small_data/queryGridData/'
+    filePath = '../data/train_data_before_time/'
+    outputFilePath = '../data/trainGridData/'
     filelist = findfile(filePath)
-    # [prepareGridData(filePath, file, outputFilePath) for file in filelist]
-    for file in filelist:
-        print(file)
-        prepareGridData(filePath, file, outputFilePath)
+    print('Start prepare training data')
+    for i in trange(0, len(filelist)):
+        prepareGridData(filePath, filelist[i], outputFilePath)
+    print('Done!')
+    filePath = '../data/query_data_before_time/'
+    outputFilePath = '../data/queryGridData/'
+    filelist = findfile(filePath)
+    print('Start prepare query data')
+    for i in trange(0, len(filelist)):
+        prepareGridData(filePath, filelist[i], outputFilePath)
     print('Done!')
             

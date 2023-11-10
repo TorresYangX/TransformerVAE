@@ -8,6 +8,7 @@ import numpy as np
 from math import sin, cos, sqrt, atan2, radians
 import glob
 import os
+from tqdm import trange
 
 def findfile(filePath):
     original_path = os.getcwd()
@@ -74,9 +75,19 @@ def prepareData(filePath, file, outputFilePath):
     return 0
 
 if __name__ == '__main__':
-    filePath = '../small_data/data_before_time/'
-    outputFilePath = '../small_data/trainingData/'
+    filePath = '../data/train_data_before_time/'
+    outputFilePath = '../data/trainingData/'
     filelist = findfile(filePath)
-    [prepareData(filePath, file, outputFilePath) for file in filelist]
+    print('Start prepare training data')
+    for i in trange(0, len(filelist)):
+        prepareData(filePath, filelist[i], outputFilePath)
     print('Done!')
+    filePath = '../data/query_data_before_time/'
+    outputFilePath = '../data/queryData/'
+    filelist = findfile(filePath)
+    print('Start prepare query data')
+    for i in trange(0, len(filelist)):
+        prepareData(filePath, filelist[i], outputFilePath)
+    print('Done!')
+
             
