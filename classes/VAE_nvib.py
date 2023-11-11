@@ -11,10 +11,10 @@ import math
 import logging
 import matplotlib.pyplot as plt
 import os
-import json
+from tqdm import tgrange
+import argparse
 
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # device = torch.device("cpu")
 
@@ -353,75 +353,72 @@ def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, e
     return test_losses_value / len(test_loader.dataset)
 
 
-def main():
-    save_model = '../small_results/VAE_nvib/VAE_nvib.pt'
-    trainlog = '../small_results/VAE_nvib/trainlog.csv'
+def trainModel(trainFilePath, modelSavePath, trainlogPath):
+    x = constructTrainingData(trainFilePath, Batch_size)
+    # split traindata and testdata
+    train_data = x[:int(len(x)*15/16), :]
+    test_data = x[int(len(x)*15/16):, :]
 
-    trainFilePath = '../small_data/GridData/'
-    queryFilePath = '../small_data/queryGridData/'
+    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_data))
+    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_data))
 
-    # # train
-    # x = constructTrainingData(trainFilePath, Batch_size)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=Batch_size)
 
-    # # split traindata and testdata
-    # train_data = x[:int(len(x)*10/11), :]
-    # test_data = x[int(len(x)*10/11):, :]
-
-    # train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_data))
-    # test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_data))
-
-    # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size)
-    # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=Batch_size)
-
-    # model = TransformerNvib().to(device)
+    model = TransformerNvib().to(device)
 
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
     tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
-    # optimizer = optim.RMSprop(model.parameters(),lr=learning_rate)
+    optimizer = optim.RMSprop(model.parameters(),lr=learning_rate)
 
-    # logger = get_logger(trainlog)
-    # train_loss_list = []
-    # test_loss_list = []
-    # print("Start training...")
-    # for epoch in range(MAX_EPOCH):
-    #     train_loss = training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask, optimizer, epoch)
-    #     test_loss = evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, epoch)
-    #     logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
-    #     train_loss_list.append(train_loss)
-    #     test_loss_list.append(test_loss)
-    # print("End training...")
-    # # save model
-    # torch.save(model, save_model)
+    logger = get_logger(trainlogPath)
+    train_loss_list = []
+    test_loss_list = []
+    print("Start training...")
+    for epoch in range(MAX_EPOCH):
+        train_loss = training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask, optimizer, epoch)
+        test_loss = evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, epoch)
+        logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
+        train_loss_list.append(train_loss)
+        test_loss_list.append(test_loss)
+    print("End training...")
+    # save model
+    torch.save(model, modelSavePath)
 
-    # encoding history
-    if not os.path.exists('../small_results/VAE_nvib/Index/History/mu/'):
-        os.makedirs('../small_results/VAE_nvib/Index/History/mu/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/History/sigma/'):
-        os.makedirs('../small_results/VAE_nvib/Index/History/sigma/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/History/pi/'):
-        os.makedirs('../small_results/VAE_nvib/Index/History/pi/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/History/alpha/'):
-        os.makedirs('../small_results/VAE_nvib/Index/History/alpha/')
+
+def encoding(modelPath, encodePart):
+    if encodePart == 'History':
+        dataPath = '../data/trainGridData/'
+    else:
+        dataPath = '../data/queryGridData/'
+    mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
+    mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
+    src_key_padding_mask = mask1.to(device)
+    tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
+    if not os.path.exists('../results/VAE_nvib/Index/{}/mu/'.format(encodePart)):
+        os.makedirs('../results/VAE_nvib/Index/{}/mu/'.format(encodePart))
+    if not os.path.exists('../results/VAE_nvib/Index/{}/sigma/'.format(encodePart)):
+        os.makedirs('../results/VAE_nvib/Index/{}/sigma/'.format(encodePart))
+    if not os.path.exists('../results/VAE_nvib/Index/{}/pi/'.format(encodePart)):
+        os.makedirs('../results/VAE_nvib/Index/{}/pi/'.format(encodePart))
+    if not os.path.exists('../results/VAE_nvib/Index/{}/alpha/'.format(encodePart)):
+        os.makedirs('../results/VAE_nvib/Index/{}/alpha/'.format(encodePart))
     for i in range(2, 9):
         for j in range(24):
-            print("history:",i, j)
             FILE = '{}_{}.npy'.format(i, j)
-            if os.path.exists(trainFilePath+FILE):
-                muFILE = '../small_results/VAE_nvib/Index/History/mu/mu_{}_{}.csv'.format(i, j)
-                sigmaFILE = '../small_results/VAE_nvib/Index/History/sigma/sigma_{}_{}.csv'.format(i, j)
-                piFILE = '../small_results/VAE_nvib/Index/History/pi/pi_{}_{}.csv'.format(i, j)
-                alphaFILE = '../small_results/VAE_nvib/Index/History/alpha/alpha_{}_{}.csv'.format(i, j)
-                x = constructSingleData(trainFilePath, FILE, Batch_size)
+            if os.path.exists(dataPath+FILE):
+                muFILE = '../results/VAE_nvib/Index/{}/mu/mu_{}_{}.csv'.format(encodePart, i, j)
+                sigmaFILE = '../results/VAE_nvib/Index/{}/sigma/sigma_{}_{}.csv'.format(encodePart, i, j)
+                piFILE = '../results/VAE_nvib/Index/{}/pi/pi_{}_{}.csv'.format(encodePart, i, j)
+                alphaFILE = '../results/VAE_nvib/Index/{}/alpha/alpha_{}_{}.csv'.format(encodePart, i, j)
+                x = constructSingleData(dataPath, FILE, Batch_size)
                 if x.shape[0] > 0:
                     predict_data = np.array(x)
-                    b = np.isnan(predict_data) # check if there is nan in the data
-                    if True in b:
-                        print(i,'_', j, " has nan.")
                     predict_dataset = torch.utils.data.TensorDataset(torch.from_numpy(predict_data))
                     predict_loader = torch.utils.data.DataLoader(predict_dataset, batch_size=Batch_size)
-                    model = torch.load(save_model)
+                    model = torch.load(modelPath)
                     model.eval()
                     result_mu = []
                     result_sigma = []
@@ -460,70 +457,25 @@ def main():
                     parameteroutput(result_pi, piFILE)
                     parameteroutput(result_alpha, alphaFILE)
 
-    # encoding query
-    if not os.path.exists('../small_results/VAE_nvib/Index/Query/mu/'):
-        os.makedirs('../small_results/VAE_nvib/Index/Query/mu/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/Query/sigma/'):
-        os.makedirs('../small_results/VAE_nvib/Index/Query/sigma/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/Query/pi/'):
-        os.makedirs('../small_results/VAE_nvib/Index/Query/pi/')
-    if not os.path.exists('../small_results/VAE_nvib/Index/Query/alpha/'):
-        os.makedirs('../small_results/VAE_nvib/Index/Query/alpha/')
-    for i in range(2, 9):
-        for j in range(24):
-            print("query:",i, j)
-            FILE = '{}_{}.npy'.format(i, j)
-            if os.path.exists(queryFilePath+FILE):
-                muFILE = '../small_results/VAE_nvib/Index/Query/mu/mu_{}_{}.csv'.format(i, j)
-                sigmaFILE = '../small_results/VAE_nvib/Index/Query/sigma/sigma_{}_{}.csv'.format(i, j)
-                piFILE = '../small_results/VAE_nvib/Index/Query/pi/pi_{}_{}.csv'.format(i, j)
-                alphaFILE = '../small_results/VAE_nvib/Index/Query/alpha/alpha_{}_{}.csv'.format(i, j)
-                x = constructSingleData(queryFilePath, FILE, Batch_size)
-                if x.shape[0] > 0:
-                    predict_data = np.array(x)
-                    b = np.isnan(predict_data) # check if there is nan in the data
-                    if True in b:
-                        print(i,'_', j, " has nan.")
-                    predict_dataset = torch.utils.data.TensorDataset(torch.from_numpy(predict_data))
-                    predict_loader = torch.utils.data.DataLoader(predict_dataset, batch_size=Batch_size)
-                    model = torch.load(save_model)
-                    model.eval()
-                    result_mu = []
-                    result_sigma = []
-                    result_pi = []
-                    result_alpha = []
-                    for idx, src in enumerate(predict_loader):
-                        src = src[0].transpose(0,1).to(device)
-                        end = torch.full((1, 64), 2500).to(device)
-                        tgt = torch.cat((src, end), dim=0)
-                        # Forward pass
-                        outputs_dict = model(
-                            src,
-                            tgt,
-                            src_key_padding_mask=src_key_padding_mask,
-                            tgt_key_padding_mask=tgt_key_padding_mask,
-                        ) 
-                        mu = outputs_dict["mu"] #(61,64,512)
-                        logvar = outputs_dict["logvar"] #(61,64,512)
-                        pi = outputs_dict["pi"].repeat(1,1,512) #(61,64,512)
-                        alpha = outputs_dict["alpha"].repeat(1,1,512) #(61,64,512)
-                        result_mu.append(mu.cpu().detach().numpy())
-                        result_sigma.append(logvar.cpu().detach().numpy())
-                        result_pi.append(pi.cpu().detach().numpy())
-                        result_alpha.append(alpha.cpu().detach().numpy())
-                        
-                    result_mu = np.concatenate(result_mu, axis = 1)
-                    result_sigma = np.concatenate(result_sigma, axis = 1)
-                    result_pi = np.concatenate(result_pi, axis = 1)
-                    result_alpha = np.concatenate(result_alpha, axis = 1)
-                    result_mu =  result_mu.transpose(1,0,2).reshape(result_mu.shape[1], -1)
-                    result_sigma = result_sigma.transpose(1,0,2).reshape(result_sigma.shape[1], -1)
-                    result_pi = result_pi.transpose(1,0,2).reshape(result_pi.shape[1], -1)
-                    result_alpha = result_alpha.transpose(1,0,2).reshape(result_alpha.shape[1], -1)
-                    parameteroutput(result_mu, muFILE)
-                    parameteroutput(result_sigma, sigmaFILE)
-                    parameteroutput(result_pi, piFILE)
-                    parameteroutput(result_alpha, alphaFILE)
+
+def main(args):
+    save_model = '../results/VAE_nvib/VAE_nvib.pt'
+    trainlog = '../results/VAE_nvib/trainlog.csv'
+    trainFilePath = '../../data/trainGridData/'
+    if args.TRAIN:
+        trainModel(trainFilePath, save_model, trainlog)
+    else:
+        encoding(save_model, args.encodePart)
+
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
+
+    parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
+
+    args = parser.parse_args()
+
+    main(args)
+
