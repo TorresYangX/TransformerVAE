@@ -4,6 +4,7 @@ import time
 from fastdtw import fastdtw
 import os
 import argparse
+from tqdm import trange
 
 def loadData(data, BATCH_SIZE):
     trajectories = pd.read_csv(data, header = None)
@@ -194,12 +195,14 @@ def traj_length(traj):
 def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=16):
     targetTraj = loadData(targetData, BATCH_SIZE)
     targetDataNum = int(len(targetTraj)/60)
+    print(targetDataNum)
     historicalTraj = loadHistoricalDataByDay(historicalData, BATCH_SIZE, targetData, history)
     historicalDataNum = int(len(historicalTraj)/60)
+    print(historicalDataNum)
     targetTrajectories_ = np.array([list(a) for a in zip(targetTraj.latitude.tolist(), targetTraj.longitude.tolist())]).reshape((int(len(targetTraj)/60), 60, 2))
     historicalTrajectories_ = np.array([list(a) for a in zip(historicalTraj.latitude.tolist(), historicalTraj.longitude.tolist())]).reshape((int(len(historicalTraj)/60), 60, 2))   
 
-    outputPath = '../small_results/{}/'.format(method_)
+    outputPath = '../results/{}/'.format(method_)
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
     outputFile = outputPath + 'history_{}.npy'.format(str(history))
@@ -207,23 +210,23 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     container = np.zeros((targetDataNum, historicalDataNum))
     method = function_map[method_]
     if method_ == 'DTW':
-        for i in range(targetDataNum):
+        for i in trange(targetDataNum):
             print('DTW calculating {} / {}...'.format(i + 1, targetDataNum), time.ctime())
             for j in range(historicalDataNum):
                 container[i, j], _ = method(targetTrajectories_[i, :, :], historicalTrajectories_[j, :, :])
     
     elif method_ == 'EDR':
-        for i in range(targetDataNum):
+        for i in trange(targetDataNum):
             print('EDR calculating {} / {}...'.format(i + 1, targetDataNum), time.ctime())
             for j in range(historicalDataNum):
                 container[i, j] = method(targetTrajectories_[i, :, :], historicalTrajectories_[j, :, :], 0.25)
     elif method_ == 'LCSS':
-        for i in range(targetDataNum):
+        for i in trange(targetDataNum):
             print('LCSS calculating {} / {}...'.format(i + 1, targetDataNum), time.ctime())
             for j in range(historicalDataNum):
                 container[i, j] = method(targetTrajectories_[i, :, :], historicalTrajectories_[j, :, :], 0.25, 5)
     elif method_ == 'EDwP':
-        for i in range(targetDataNum):
+        for i in trange(targetDataNum):
             print('EDwP calculating {} / {}...'.format(i + 1, targetDataNum), time.ctime())
             for j in range(historicalDataNum):
                 container[i, j] = method(targetTrajectories_[i, :, :], historicalTrajectories_[j, :, :])
@@ -233,10 +236,10 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     return 0
     
 if __name__ == '__main__':
-    data = pd.read_csv('../small_data/data_before_time/8_7.csv', header=None)
+    data = pd.read_csv('../data/Experiment/history_data_before_time/8_7.csv', header=None)
     data.columns = ['time', 'lon', 'lat', 'id']
-    choose1 = data[data.id == 1]
-    choose2 = data[data.id == 4] 
+    choose1 = data[data.id == 89]
+    choose2 = data[data.id == 96] 
     traj1 = [list(a) for a in (zip(choose1.lat.tolist(), choose1.lon.tolist()))]
     traj2 = [list(a) for a in (zip(choose2.lat.tolist(), choose2.lon.tolist()))]
     print(len(traj1), len(traj2))
