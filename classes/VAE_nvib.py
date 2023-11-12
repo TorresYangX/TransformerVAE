@@ -9,10 +9,11 @@ import numpy as np
 import pandas as pd
 import math
 import logging
-import matplotlib.pyplot as plt
 import os
 from tqdm import tgrange
 import argparse
+
+from Train import constructTrainingData, constructSingleData, get_logger, parameteroutput
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -22,7 +23,7 @@ grid_num = 50
 vocab_size = grid_num * grid_num +1 #V
 Batch_size = 64 #B
 trajectory_length = 60
-embedding_dim = 512 # H
+embedding_dim = 16 # H
 PRIOR_MU = 0
 PRIOR_VAR = 1
 PRIOR_ALPHA = 1
@@ -77,51 +78,6 @@ KL_ANNEALING_FACTOR_GAUSSIAN_LIST = kl_annealing(
 KL_ANNEALING_FACTOR_DIRICHLET_LIST = kl_annealing(
     n_epoch=MAX_EPOCH, type=KL_ANNEALING_DIRICHLET
 )
-
-
-# same
-def constructTrainingData(filePath, BATCH_SIZE):
-    x = []
-    for file in os.listdir(filePath):
-        data = np.load(filePath + file)
-        x.extend(data)
-    x = np.array(x)
-    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
-    x = x[:resid, :, :]
-    x = x[:, :, 0] # only use the grid num
-    return x
-
-def constructSingleData(filePath, file, BATCH_SIZE):
-    data = np.load(filePath + file)
-    x = np.array(data)
-    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
-    x = x[:resid, :, :]
-    return x[:, :,0]
-        
-def parameteroutput(data, file):
-    directory = os.path.dirname(file)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    para = pd.DataFrame(data)
-    with open(file, mode = 'w') as f:
-        para.to_csv(f, index = False, header = None)
-
-def get_logger(filename, verbosity=1, name=None):
-    level_dict = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARNING}
-    formatter = logging.Formatter(
-        "[%(asctime)s][%(filename)s][line:%(lineno)d][%(levelname)s] %(message)s"
-    )
-    logger = logging.getLogger(name)
-    logger.setLevel(level_dict[verbosity])
- 
-    fh = logging.FileHandler(filename, "w")
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
- 
-    sh = logging.StreamHandler()
-    sh.setFormatter(formatter)
-    logger.addHandler(sh)
-    return logger
 
 
 class TokenEmbedding(nn.Module):
@@ -220,6 +176,7 @@ class TransformerNvib(nn.Module):
         self.transformer_decoder = TransformerDecoder()
         self.output_proj = nn.Linear(embedding_dim, vocab_size)
         self.drop = nn.Dropout(dropout)
+        self.softmax = nn.Softmax(dim=2)
 
     def encode(self,src, src_key_padding_mask):
         src = self.token_embedding(src.to(torch.int64).to(device)) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
@@ -241,6 +198,7 @@ class TransformerNvib(nn.Module):
             memory_key_padding_mask=memory_key_padding_mask, # [B,Nt] (64,61)
         )
         logits = self.output_proj(output)  # [Nt,B,V]
+        logits = self.softmax(logits)
         return logits
 
     def loss(self, logits, targets, epoch,  **kwargs):
@@ -384,15 +342,14 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
-    # save model
     torch.save(model, modelSavePath)
 
 
 def encoding(modelPath, encodePart):
     if encodePart == 'History':
-        dataPath = '../data/trainGridData/'
+        dataPath = '../data/Experiment/hoGridData/'
     else:
-        dataPath = '../data/queryGridData/'
+        dataPath = '../data/Experiment/queryGridData/'
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
@@ -459,9 +416,12 @@ def encoding(modelPath, encodePart):
 
 
 def main(args):
+    root = '../results/VAE_nvib/'
+    if not os.path.exists(root):
+        os.makedirs(root)
     save_model = '../results/VAE_nvib/VAE_nvib.pt'
     trainlog = '../results/VAE_nvib/trainlog.csv'
-    trainFilePath = '../../data/trainGridData/'
+    trainFilePath = '../data/Train/trainGridData/'
     if args.TRAIN:
         trainModel(trainFilePath, save_model, trainlog)
     else:

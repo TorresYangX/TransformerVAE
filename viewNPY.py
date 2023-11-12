@@ -7,7 +7,7 @@ def viewNpy(targetData):
     print(file)
 
 if __name__ == '__main__':
-    targetData =  '../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/emd_.npy'
+    targetData =  '../results/LCSS/KDTreeLCSS/EMD/emd_.npy'
     viewNpy(targetData)
     file = np.load(targetData)
     mean = np.mean(file)

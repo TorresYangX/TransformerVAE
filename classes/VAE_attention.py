@@ -160,9 +160,9 @@ class GaussianNoise():
         return index_, mu_all + torch.exp(sigma_all / 2) * epsilon_all
 
 
-class VAE(nn.Module):
+class VAE_attention(nn.Module):
     def __init__(self, input_dim, linear_dim, output_dim, hidden_dim, latent_dim, batch_size, repeat_times):
-        super(VAE, self).__init__()
+        super(VAE_attention, self).__init__()
         self.input_dim = input_dim
         self.linear_dim = linear_dim
         self.output_dim = output_dim

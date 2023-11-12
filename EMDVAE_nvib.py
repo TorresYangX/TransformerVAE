@@ -3,9 +3,10 @@ import numpy as np
 from sklearn.neighbors import KDTree
 import os
 import time
+from tqdm import trange
 from pyemd import emd
 
-latent_dim = 61*512
+latent_dim = 16
 
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
@@ -89,7 +90,7 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, piPath, alphaPath,  BATCH_SI
         
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
     with open(retrievedTrajectories, mode = 'w') as f:
-        for i in range(len(solution)):
+        for i in trange(len(solution)):
             historicalTrajectories[solution[i]*60:(solution[i]+1)*60].to_csv(f, header = None, index = False)
     return 0
 
@@ -97,7 +98,7 @@ def retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTraje
     tree = KDTree(historicalProb_)
     solution = []
     wf = open(scoreFile, mode='w')
-    for i in range(len(targetProb_)):
+    for i in trange(len(targetProb_)):
         nearest_dist, nearest_ind = tree.query(targetProb_[i].reshape((1,4*latent_dim)), k=targetNum)
         meanLoss = nearest_dist[0].mean()
         wf.write(str(i) + ',' + str(meanLoss) + '\n')
@@ -114,7 +115,7 @@ def normalize(targetTrajectories):
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS=39.6, latN=40.2, lonW=116.0, lonE=116.8, NLAT=8, NLON=8):
+def cityEMD(targetTrajectories, retrievedTrajectories_, NLAT=50, NLON=50):
     targetX = normalize(targetTrajectories)
     retrievedY = normalize(retrievedTrajectories_)
     Xdis = ((0.5 * (targetX[:, :, 0] + 1) * NLAT).astype(int) * NLON + (0.5 * (targetX[:, :, 1] + 1) * NLON).astype(int)).astype(int)
@@ -122,38 +123,39 @@ def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS
     flowReal = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowRetrieved = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowDistance = np.zeros((NLAT*NLON,NLAT*NLON))
-    for i in range(64):
-        print(i, ' / 64...', time.ctime())
-        for j in range(64):
+    for i in trange(NLAT*NLON):
+        for j in range(NLAT*NLON):
             flowDistance[i, j] = min(10.0, np.sqrt(((i//NLON)-(j//NLON))**2+((i%NLON)-(j%NLON))**2))
             for k in range(59):
                 flowReal[Xdis[i,k],Xdis[j,k+1],k] += 1.0
                 flowRetrieved[Ydis[i,k],Ydis[j,k+1],k] += 1.0
     emd_ = np.zeros(59)
-    for kt in range(59):
-        print(kt, ' / 59...', time.ctime())
-        for it in range(64):
+    for kt in trange(59):
+        for it in range(NLAT*NLON):
             emd_[kt] += emd(flowReal[it, :, kt].copy(order='C'), flowRetrieved[it, :, kt].copy(order='C'), flowDistance)
-    np.save('../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/emd_.npy', emd_)
+    np.save('../results/VAE_nvib/KDTreeVAE_nvib/EMD/emd_.npy', emd_)
     return 0
         
 if __name__ == '__main__':
-    BATCH_SIZE = 64
-    path_ = '../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/'
+    BATCH_SIZE = 16
+    path_ = '../results/VAE_nvib/KDTreeVAE_nvib'
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../small_data/data_before_time/'
-    historicalMu = '../small_results/VAE_nvib/Index/History/mu/'
-    historicalSigma = '../small_results/VAE_nvib/Index/History/sigma/'
-    historicalPi = '../small_results/VAE_nvib/Index/History/pi/'
-    historicalAlpha = '../small_results/VAE_nvib/Index/History/alpha/'
-    targetData = '../small_data/query_data_before_time/2_17.csv'
-    targetMu = '../small_results/VAE_nvib/Index/Query/mu/mu_2_17.csv'
-    targetSigma = '../small_results/VAE_nvib/Index/Query/sigma/sigma_2_17.csv'
-    targetPi = '../small_results/VAE_nvib/Index/Query/pi/pi_2_17.csv'
-    targetAlpha = '../small_results/VAE_nvib/Index/Query/alpha/alpha_2_17.csv'
-    queryOutputPath = '../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/queryTrajectories.csv'
-    scoreFile = '../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/meanLoss.csv'
+    path_ = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/'
+    if not os.path.exists(path_):
+        os.mkdir(path_)
+    historicalData = '../data/train_data_before_time/'
+    historicalMu = '../results/VAE_nvib/Index/History/mu/'
+    historicalSigma = '../results/VAE_nvib/Index/History/sigma/'
+    historicalPi = '../results/VAE_nvib/Index/History/pi/'
+    historicalAlpha = '../results/VAE_nvib/Index/History/alpha/'
+    targetData = '../data/query_data_before_time/2_17.csv'
+    targetMu = '../results/VAE_nvib/Index/Query/mu/mu_2_17.csv'
+    targetSigma = '../results/VAE_nvib/Index/Query/sigma/sigma_2_17.csv'
+    targetPi = '../results/VAE_nvib/Index/Query/pi/pi_2_17.csv'
+    targetAlpha = '../results/VAE_nvib/Index/Query/alpha/alpha_2_17.csv'
+    queryOutputPath = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/queryTrajectories.csv'
+    scoreFile = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/meanLoss.csv'
     targetTrajectories, targetMu_, targetSigma_, targetPi_, tragetAlpha_ = loadData(targetData, targetMu, targetSigma, 
                                                                                     targetPi, targetAlpha, 
                                                                                     BATCH_SIZE, queryOutputPath, True)
@@ -165,8 +167,8 @@ if __name__ == '__main__':
                                                                                                                   BATCH_SIZE, targetData, history=6)
     historicalProb_ = pd.concat([historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_], axis=1)
     historicalProb_ = historicalProb_.values
-    print(np.shape(historicalProb_))
-    retrievedTrajectories = '../small_results/VAE_nvib/KDTreeVAE_nvib/EMD/retrievedTrajectories.csv'
+    print(historicalProb_.shape)
+    retrievedTrajectories = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/retrievedTrajectories.csv'
     retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories)
     
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)

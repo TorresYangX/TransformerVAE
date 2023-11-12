@@ -3,9 +3,9 @@ import numpy as np
 from sklearn.neighbors import KDTree
 import time
 import os
-from traj_simi import EDwP
-import multiprocessing as mp
+from tqdm import trange
 from pyemd import emd
+import argparse
 
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
@@ -53,7 +53,7 @@ def loadScore(path, history):
     return container
         
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
-    with open(retrievedTrajectories, mode = 'a') as f:
+    with open(retrievedTrajectories, mode = 'w') as f:
         for i in range(len(solution)):
             historicalTrajectories[solution[i]*60:(solution[i]+1)*60].to_csv(f, header = None, index = False)
     return 0
@@ -73,12 +73,12 @@ def retrieval(scoreFile, historicalScore, targetNum, retrievedTrajectories, hist
 
 def normalize(targetTrajectories):
     targetX = targetTrajectories[['latitude', 'longitude']]
-    targetX.latitude = (targetX.latitude - 39.9) / 0.3
-    targetX.longitude = (targetX.longitude - 116.4) / 0.4
+    targetX.loc[:, 'latitude'] = (targetX.loc[:, 'latitude'] - 39.9) / 0.3
+    targetX.loc[:, 'longitude'] = (targetX.loc[:, 'longitude'] - 116.4) / 0.4
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS=39.6, latN=40.2, lonW=116.0, lonE=116.8, NLAT=8, NLON=8):
+def cityEMD(targetTrajectories, reterievedTrajectories_, method, NLAT=6, NLON=8):
     targetX = normalize(targetTrajectories)
     retrievedY = normalize(reterievedTrajectories_)
     Xdis = ((0.5 * (targetX[:, :, 0] + 1) * NLAT).astype(int) * NLON + (0.5 * (targetX[:, :, 1] + 1) * NLON).astype(int)).astype(int)
@@ -86,41 +86,49 @@ def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS
     flowReal = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowRetrieved = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowDistance = np.zeros((NLAT*NLON,NLAT*NLON))
-    for i in range(64):
-        print(i, ' / 64...', time.ctime())
-        for j in range(64):
+    for i in trange(NLAT*NLON):
+        for j in range(NLAT*NLON):
             flowDistance[i, j] = min(10.0, np.sqrt(((i//NLON)-(j//NLON))**2+((i%NLON)-(j%NLON))**2))
             for k in range(59):
                 flowReal[Xdis[i,k],Xdis[j,k+1],k] += 1.0
                 flowRetrieved[Ydis[i,k],Ydis[j,k+1],k] += 1.0
     emd_ = np.zeros(59)
     for kt in range(59):
-        print(kt, ' / 59...', time.ctime())
-        for it in range(64):
+        for it in range(NLAT*NLON):
             emd_[kt] += emd(flowReal[it, :, kt].copy(order='C'), flowRetrieved[it, :, kt].copy(order='C'), flowDistance)
-    np.save('../small_results/EDwP/KDTreeEDwP/EMD/emd_.npy', emd_)
+    np.save('../results/{}/KDTree{}/EMD/emd_.npy'.format(method, method), emd_)
     return 0
 
-if __name__ == '__main__':
+def main(args):
     BATCH_SIZE = 16
     history = 6
-    path_ = '../small_results/EDwP/KDTreeEDwP/EMD/'
+    path_ = '../results/{}/KDTree{}/'.format(args.METHOD, args.METHOD)
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../small_data/data_before_time/'
-    targetData = '../small_data/query_data_before_time/8_7.csv'
-    historicalScore_ = '../small_results/EDwP/'
-    scoreFile = '../small_results/EDwP/KDTreeEDwP/EMD/meanLoss.csv'.format(history)
+    path_ = '../results/{}/KDTree{}/EMD/'.format(args.METHOD, args.METHOD)
+    if not os.path.exists(path_):
+        os.mkdir(path_)
+    historicalData = '../data/Experiment/history_data_before_time/'
+    targetData = '../data/Experiment/query_data_before_time/8_17.csv'
+    historicalScore_ = '../results/{}/'.format(args.METHOD)
+    scoreFile = '../results/{}/KDTree{}/EMD/meanLoss.csv'.format(args.METHOD, args.METHOD)
     targetTrajectories = loadDataOnly(targetData, BATCH_SIZE)
-    targetNum = 1
+    targetNum = 10
     historicalTrajectories = loadHistoricalDataOnly(historicalData, BATCH_SIZE, targetData, history)
     historicalScore = loadScore(historicalScore_, history)
-    print('finish loading data', time.ctime())
         
-    retrievedTrajectories = '../small_results/EDwP/KDTreeEDwP/EMD/retrievedTrajectories.csv'.format(history)
+    retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.METHOD, args.METHOD)
     retrieval(scoreFile, historicalScore, targetNum, retrievedTrajectories, historicalTrajectories)
-    print('finish retrieval', time.ctime())
     
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
     retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
-    cityEMD(targetTrajectories, retrievedTrajectories_, thresholdDistance=10)
+    cityEMD(targetTrajectories, retrievedTrajectories_, args.METHOD)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-m", "--METHOD", type=str, default="LCSS", choices=["LCSS","EDR","EDwP"], required=True)
+
+    args = parser.parse_args()
+
+    main(args)
