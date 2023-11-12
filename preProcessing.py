@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import trange
-
+import argparse
 
 # longtitude: 116 116.8
 # latitude: 39.6 40.2
@@ -11,11 +11,6 @@ from tqdm import trange
 # time interval: 1min
 # time range: 2.1-2.8
 # trajectory length: 60
-
-train_start_id = 1
-train_end_id = 9001
-query_start_id = 9001
-query_end_id = 10358
 
 def preprocess(START, END, filePath, outputFilePath, startid, endid):
     for id_num in trange(startid, endid):
@@ -70,37 +65,43 @@ def preprocess_time(START, END, filePath, outputFilePath, startid, endid):
             if data.shape[0] != 0:
                 with open(outputFilePath + fileName, mode='a') as f:
                     data.to_csv(f, header = None, index = False)
+
+def main(args):
+    header1 = '../data/Train/'
+    header2 = '../data/Experiment/'
+    if args.MODEL == 'Train':
+        header = header1
+    else:
+        header = header2
+    filePath = '../data/seperatedData/'
+    outputFilePath = header+'{}_data_before/'.format(args.MODEL)
+    if not os.path.exists(outputFilePath):  
+        os.makedirs(outputFilePath)
+    print('preProcessing traindata...')
+    preprocess(args.STARTDAY, args.ENDDAY, filePath, outputFilePath, args.STARTID, args.ENDID)
+    print('preProcessing traindata Done!')
+    outputFilePath_ = header+'{}_data_before_time/'.format(args.MODEL)
+    if not os.path.exists(outputFilePath_):
+        os.makedirs(outputFilePath_)
+    print('preProcessing according time...')
+    preprocess_time(args.STARTDAY, args.ENDDAY, outputFilePath, outputFilePath_, args.STARTID, args.ENDID)
+    print('preProcessing according time Done!')
                     
 
 if __name__ == '__main__':
-    START, END = 2, 9
-    # filePath = '../data/seperatedData/'
-    # outputFilePath = '../data/train_data_before/'
-    # if not os.path.exists(outputFilePath):  
-    #     os.makedirs(outputFilePath)
-    # print('preProcessing traindata...')
-    # preprocess(START, END, filePath, outputFilePath, train_start_id, train_end_id)
-    # print('preProcessing traindata Done!')
-    filePath = '../data/train_data_before/'
-    outputFilePath = '../data/train_data_before_time/'
-    if not os.path.exists(outputFilePath):
-        os.makedirs(outputFilePath)
-    print('preProcessing according time...')
-    preprocess_time(START, END, filePath, outputFilePath, train_start_id, train_end_id)
-    print('preProcessing according time Done!')
+    parser = argparse.ArgumentParser()
 
-    # filePath = '../data/seperatedData/'
-    # outputFilePath = '../data/query_data_before/'
-    # if not os.path.exists(outputFilePath):  
-    #     os.makedirs(outputFilePath)
-    # print('preProcessing querydata...')
-    # preprocess(START, END, filePath, outputFilePath, query_start_id, query_end_id)
-    # print('preProcessing querydata Done!')
-    filePath = '../data/query_data_before/'
-    outputFilePath = '../data/query_data_before_time/'
-    if not os.path.exists(outputFilePath):
-        os.makedirs(outputFilePath)
-    print('preProcessing according time...')
-    preprocess_time(START, END, filePath, outputFilePath, query_start_id, query_end_id)
-    print('preProcessing according time Done!')
+    parser.add_argument("-m", "--MODEL", type=str, default="train", choices=["train","history","query"], required=True)
+
+    parser.add_argument("-s", "--STARTDAY", type=int, default=2,help="start day", required=True)
+
+    parser.add_argument("-e", "--ENDDAY", type=int, default=9,help="end day", required=True)
+
+    parser.add_argument("-sid", "--STARTID", type=int, default=1,help="start id", required=True)
+
+    parser.add_argument("-eid", "--ENDID", type=int, default=10358,help="end id", required=True)
+
+    args = parser.parse_args()
+
+    main(args)
     
