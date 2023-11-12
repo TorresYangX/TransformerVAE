@@ -10,10 +10,8 @@ import pandas as pd
 import math
 import logging
 import os
-from tqdm import tgrange
+from tqdm import trange
 import argparse
-
-from Train import constructTrainingData, constructSingleData, get_logger, parameteroutput
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -39,6 +37,50 @@ dropout = 0.1
 learning_rate = 0.001
 MAX_EPOCH = 10
 ACCUMULATION_STEPS = 1
+
+def constructTrainingData(filePath, BATCH_SIZE):
+    x = []
+    for file in os.listdir(filePath):
+        data = np.load(filePath + file)
+        x.extend(data)
+    x = np.array(x)
+    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
+    x = x[:resid, :, :]
+    x = x[:, :, 0] # only use the grid num
+    return x
+
+def constructSingleData(filePath, file, BATCH_SIZE):
+    data = np.load(filePath + file)
+    x = np.array(data)
+    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
+    x = x[:resid, :, :]
+    return x[:, :,0]
+        
+def parameteroutput(data, file):
+    directory = os.path.dirname(file)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    para = pd.DataFrame(data)
+    with open(file, mode = 'w') as f:
+        para.to_csv(f, index = False, header = None)
+
+def get_logger(filename, verbosity=1, name=None):
+    level_dict = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARNING}
+    formatter = logging.Formatter(
+        "[%(asctime)s][%(filename)s][line:%(lineno)d][%(levelname)s] %(message)s"
+    )
+    logger = logging.getLogger(name)
+    logger.setLevel(level_dict[verbosity])
+ 
+    fh = logging.FileHandler(filename, "w")
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+ 
+    sh = logging.StreamHandler()
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+    return logger
+
 
 
 def kl_annealing(start=0, stop=1, n_epoch=30, type="constant", n_cycle=4, ratio=0.5):
@@ -335,7 +377,7 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
     train_loss_list = []
     test_loss_list = []
     print("Start training...")
-    for epoch in range(MAX_EPOCH):
+    for epoch in trange(MAX_EPOCH):
         train_loss = training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask, optimizer, epoch)
         test_loss = evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, epoch)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
@@ -431,7 +473,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
+    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode", required=True)
 
     parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
 
