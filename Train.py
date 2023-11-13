@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
 
-    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "VAEA"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE"], required=True)
 
     args = parser.parse_args()
 

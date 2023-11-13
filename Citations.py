@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm import trange
 from pyemd import emd
+import argparse
 
 
 def normalize(targetTrajectories):
@@ -33,6 +34,23 @@ def cityEMD(targetTrajectories, reterievedTrajectories_, method, NLAT=6, NLON=8)
     return 0
 
 
-# retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
-# retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
-# cityEMD(targetTrajectories, retrievedTrajectories_, args.METHOD)
+
+
+def main(args):
+    retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
+    targetTrajectories = '../results/{}/KDTree{}/EMD/queryTrajectories.csv'.format(args.MODEL, args.MODEL)
+    retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
+    targetTrajectories = pd.read_csv(targetTrajectories, header = None)
+    retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
+    targetTrajectories.columns = ['time', 'longitude', 'latitude', 'id']
+    {
+        'cityEMD': cityEMD
+    }(targetTrajectories, retrievedTrajectories_, args.MODEL)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-mo', '--MODEL', type=str, default='VAE', help='model name', choices=["AE", "VAE", "VAE_nvib", "LCSS", "EDR", "EDwP"], required=True)
+    parser.add_argument('-md', '--METHOD', type=str, default='cityEMD', help='method', choices=["cityEMD"], required=True)
+    args = parser.parse_args()
+    main(args)
