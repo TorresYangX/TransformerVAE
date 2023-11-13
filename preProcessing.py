@@ -80,7 +80,7 @@ def main(args):
     print('preProcessing traindata...')
     preprocess(args.STARTDAY, args.ENDDAY, filePath, outputFilePath, args.STARTID, args.ENDID)
     print('preProcessing traindata Done!')
-    outputFilePath_ = header+'{}_data_before_time/'.format(args.MODEL)
+    outputFilePath_ = header+'{}/{}_data_before_time/'.format(args.MODEL, args.MODEL)
     if not os.path.exists(outputFilePath_):
         os.makedirs(outputFilePath_)
     print('preProcessing according time...')
