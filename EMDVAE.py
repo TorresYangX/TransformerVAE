@@ -3,10 +3,11 @@ import numpy as np
 from sklearn.neighbors import KDTree
 import os
 import time
+from tqdm import trange
 from pyemd import emd
 
-def MSE(targetProb_, historicalProb_):
-    return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
+embedding_dim = 16
+
 
 def loadData(data, mu, sigma, BATCH_SIZE, queryOutputPath,reStore):
     trajectories = pd.read_csv(data, header = None)
@@ -34,7 +35,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, BATCH_SIZE, targetData, hist
                 file = '{}_{}.csv'.format(i, j)
                 muFile = 'mu_{}_{}.csv'.format(i, j)
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_ =loadData(dataPath + file, muPath + muFile, sigmaPath + sigmaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
                     historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
@@ -45,7 +47,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, BATCH_SIZE, targetData, hist
                 file = '{}_{}.csv'.format(i, j)
                 muFile = 'mu_{}_{}.csv'.format(i, j)
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_ =loadData(dataPath + file, muPath + muFile, sigmaPath + sigmaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
                     historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
@@ -55,7 +58,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, BATCH_SIZE, targetData, hist
                 file = '{}_{}.csv'.format(i, j)
                 muFile = 'mu_{}_{}.csv'.format(i, j)
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_ =loadData(dataPath + file, muPath + muFile, sigmaPath + sigmaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
                     historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
@@ -76,8 +80,7 @@ def retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTraje
     solution = []
     wf = open(scoreFile, mode='w')
     for i in range(len(targetProb_)):
-        print(targetProb_[i].shape)
-        nearest_dist, nearest_ind = tree.query(targetProb_[i].reshape((1,8)), k=targetNum)
+        nearest_dist, nearest_ind = tree.query(targetProb_[i].reshape((1, embedding_dim*2)), k=targetNum)
         meanLoss = nearest_dist[0].mean()
         wf.write(str(i) + ',' + str(meanLoss) + '\n')
         solution += list(nearest_ind[0])
@@ -93,7 +96,7 @@ def normalize(targetTrajectories):
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS=39.6, latN=40.2, lonW=116.0, lonE=116.8, NLAT=8, NLON=8):
+def cityEMD(targetTrajectories, retrievedTrajectories_,  NLAT=6, NLON=8):
     targetX = normalize(targetTrajectories)
     retrievedY = normalize(retrievedTrajectories_)
     Xdis = ((0.5 * (targetX[:, :, 0] + 1) * NLAT).astype(int) * NLON + (0.5 * (targetX[:, :, 1] + 1) * NLON).astype(int)).astype(int)
@@ -101,34 +104,35 @@ def cityEMD(targetTrajectories, reterievedTrajectories_, thresholdDistance, latS
     flowReal = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowRetrieved = np.zeros((NLAT*NLON,NLAT*NLON,59))
     flowDistance = np.zeros((NLAT*NLON,NLAT*NLON))
-    for i in range(64):
-        print(i, ' / 64...', time.ctime())
-        for j in range(64):
+    for i in trange(NLAT*NLON):
+        for j in range(NLAT*NLON):
             flowDistance[i, j] = min(10.0, np.sqrt(((i//NLON)-(j//NLON))**2+((i%NLON)-(j%NLON))**2))
             for k in range(59):
                 flowReal[Xdis[i,k],Xdis[j,k+1],k] += 1.0
                 flowRetrieved[Ydis[i,k],Ydis[j,k+1],k] += 1.0
     emd_ = np.zeros(59)
     for kt in range(59):
-        print(kt, ' / 59...', time.ctime())
-        for it in range(64):
+        for it in range(NLAT*NLON):
             emd_[kt] += emd(flowReal[it, :, kt].copy(order='C'), flowRetrieved[it, :, kt].copy(order='C'), flowDistance)
-    np.save('../small_results/VariationalAE/KDTreeVAE/EMD/emd_.npy', emd_)
+    np.save('../results/VAE/KDTreeVAE/EMD/emd_.npy', emd_)
     return 0
         
 if __name__ == '__main__':
     BATCH_SIZE = 16
-    path_ = '../small_results/VariationalAE/KDTreeVAE/EMD/'
+    path_ = '../results/VAE/KDTreeVAE/'
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../small_data/data_before_time/'
-    historicalMu = '../small_results/VariationalAE/Index/History/mu/'
-    historicalSigma = '../small_results/VariationalAE/Index/History/sigma/'
-    targetData = '../small_data/query_data_before_time/2_17.csv'
-    targetMu = '../small_results/VariationalAE/Index/Query/mu/mu_2_17.csv'
-    targetSigma = '../small_results/VariationalAE/Index/Query/sigma/sigma_2_17.csv'
-    queryOutputPath = '../small_results/VariationalAE/KDTreeVAE/EMD/queryTrajectories.csv'
-    scoreFile = '../small_results/VariationalAE/KDTreeVAE/EMD/meanLoss.csv'
+    path_ = '../results/VAE/KDTreeVAE/EMD/'
+    if not os.path.exists(path_):
+        os.mkdir(path_)
+    historicalData = '../data/Experiment/history_data_before_time/'
+    historicalMu = '../results/VAE/Index/History/mu/'
+    historicalSigma = '../results/VAE/Index/History/sigma/'
+    targetData = '../data/Experiment/query_data_before_time/8_17.csv'
+    targetMu = '../results/VAE/Index/Query/mu/mu_8_17.csv'
+    targetSigma = '../results/VAE/Index/Query/sigma/sigma_8_17.csv'
+    queryOutputPath = '../results/VAE/KDTreeVAE/EMD/queryTrajectories.csv'
+    scoreFile = '../results/VAE/KDTreeVAE/EMD/meanLoss.csv'
     targetTrajectories, targetMu_, targetSigma_ = loadData(targetData, targetMu, targetSigma, BATCH_SIZE, queryOutputPath, True)
     targetProb_ = pd.concat([targetMu_, targetSigma_], axis=1)
     targetProb_ = targetProb_.values
@@ -136,10 +140,9 @@ if __name__ == '__main__':
     historicalTrajectories, historicalMu_, historicalSigma_ = loadHistoricalData(historicalData, historicalMu, historicalSigma, BATCH_SIZE, targetData, history=6)
     historicalProb_ = pd.concat([historicalMu_, historicalSigma_], axis=1)
     historicalProb_ = historicalProb_.values
-    print(np.shape(historicalProb_))
-    retrievedTrajectories = '../small_results/VariationalAE/KDTreeVAE/EMD/retrievedTrajectories.csv'
+    retrievedTrajectories = '../results/VAE/KDTreeVAE/EMD/retrievedTrajectories.csv'
     retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories)
     
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
     retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
-    cityEMD(targetTrajectories, retrievedTrajectories_, thresholdDistance=10)
+    cityEMD(targetTrajectories, retrievedTrajectories_)

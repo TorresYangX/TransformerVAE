@@ -165,12 +165,12 @@ def encoding(modelPath, args):
                         for idx, src in enumerate(predict_loader):
                             src = src[0].to(device)
                             dict = model(src)
-                            mu = dict['mu'][:, 0, :]
-                            logvar = dict['logvar'][:, 0, :]
+                            mu = dict['mu'][:,0,:]
+                            logvar = dict['logvar'][:,0,:]
                             result_mu.append(mu.cpu().detach().numpy())
                             result_sigma.append(logvar.cpu().detach().numpy())
-                        result_mu = np.concatenate(result_mu, axis = 1)
-                        result_sigma = np.concatenate(result_sigma, axis = 1)
+                        result_mu = np.concatenate(result_mu, axis = 0)
+                        result_sigma = np.concatenate(result_sigma, axis = 0)
                         parameteroutput(result_mu, muFILE)
                         parameteroutput(result_sigma, sigmaFILE)
                     elif args.MODEL == "AE":
@@ -180,7 +180,7 @@ def encoding(modelPath, args):
                             dict = model(src)
                             prob = dict['h'][:, 0, :]
                             result_prob.append(prob.cpu().detach().numpy())
-                        result_prob = np.concatenate(result_prob, axis = 1)
+                        result_prob = np.concatenate(result_prob, axis = 0)
                         parameteroutput(result_prob, probFILE)
 
 
