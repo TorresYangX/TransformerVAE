@@ -6,7 +6,9 @@ import time
 from tqdm import trange
 from pyemd import emd
 
-latent_dim = 16*64
+embedding_dim = 16
+trajectory_length = 61
+latent_dim = embedding_dim * trajectory_length
 
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
@@ -118,7 +120,7 @@ def normalize(targetTrajectories):
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(targetTrajectories, retrievedTrajectories_, NLAT=50, NLON=50):
+def cityEMD(targetTrajectories, retrievedTrajectories_, NLAT=6, NLON=8):
     targetX = normalize(targetTrajectories)
     retrievedY = normalize(retrievedTrajectories_)
     Xdis = ((0.5 * (targetX[:, :, 0] + 1) * NLAT).astype(int) * NLON + (0.5 * (targetX[:, :, 1] + 1) * NLON).astype(int)).astype(int)
@@ -176,4 +178,4 @@ if __name__ == '__main__':
     
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
     retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
-    cityEMD(targetTrajectories, retrievedTrajectories_, thresholdDistance=10)
+    cityEMD(targetTrajectories, retrievedTrajectories_)
