@@ -145,10 +145,6 @@ def encoding(modelPath, args):
         dataPath = '../data/Experiment/historyGridData/'
     else:
         dataPath = '../data/Experiment/queryGridData/'
-    if not os.path.exists('../results/{}/Index/{}/mu/'.format(args.MODEL, args.encodePart)):
-        os.makedirs('../results/{}/Index/{}/mu/'.format(args.MODEL, args.encodePart))
-    if not os.path.exists('../results/{}/Index/{}/sigma/'.format(args.MODEL, args.encodePart)):
-        os.makedirs('../results/{}/Index/{}/sigma/'.format(args.MODEL, args.encodePart))
     for i in range(2, 9):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
@@ -182,7 +178,7 @@ def encoding(modelPath, args):
                         for idx, src in enumerate(predict_loader):
                             src = src[0].to(device)
                             dict = model(src)
-                            prob = dict['h']
+                            prob = dict['h'][:, 0, :]
                             result_prob.append(prob.cpu().detach().numpy())
                         result_prob = np.concatenate(result_prob, axis = 1)
                         parameteroutput(result_prob, probFILE)
@@ -206,7 +202,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--TRAIN", type=bool, default=True, help="train or encode", required=True)
+    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
 
     parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
 

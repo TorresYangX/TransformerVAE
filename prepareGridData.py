@@ -88,18 +88,14 @@ def prepareGridData(filePath, file, outputFilePath):
     return 0
 
 if __name__ == '__main__':
-    filePath = '../data/train_data_before_time/'
-    outputFilePath = '../data/trainGridData/'
+    filePath = '../data/Experiment/history_data_before_time/'
+    outputFilePath = '../data/Experiment/historyGridData/'
     filelist = findfile(filePath)
-    print('Start prepare training data')
     for i in trange(0, len(filelist)):
         prepareGridData(filePath, filelist[i], outputFilePath)
-    print('Done!')
-    filePath = '../data/query_data_before_time/'
-    outputFilePath = '../data/queryGridData/'
+    filePath = '../data/Experiment/query_data_before_time/'
+    outputFilePath = '../data/Experiment/queryGridData/'
     filelist = findfile(filePath)
-    print('Start prepare query data')
     for i in trange(0, len(filelist)):
         prepareGridData(filePath, filelist[i], outputFilePath)
-    print('Done!')
             

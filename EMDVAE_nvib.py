@@ -6,7 +6,7 @@ import time
 from tqdm import trange
 from pyemd import emd
 
-latent_dim = 16
+latent_dim = 16*64
 
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
@@ -144,16 +144,16 @@ if __name__ == '__main__':
     path_ = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/'
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../data/train_data_before_time/'
+    historicalData = '../data/Experiment/history_data_before_time/'
     historicalMu = '../results/VAE_nvib/Index/History/mu/'
     historicalSigma = '../results/VAE_nvib/Index/History/sigma/'
     historicalPi = '../results/VAE_nvib/Index/History/pi/'
     historicalAlpha = '../results/VAE_nvib/Index/History/alpha/'
-    targetData = '../data/query_data_before_time/2_17.csv'
-    targetMu = '../results/VAE_nvib/Index/Query/mu/mu_2_17.csv'
-    targetSigma = '../results/VAE_nvib/Index/Query/sigma/sigma_2_17.csv'
-    targetPi = '../results/VAE_nvib/Index/Query/pi/pi_2_17.csv'
-    targetAlpha = '../results/VAE_nvib/Index/Query/alpha/alpha_2_17.csv'
+    targetData = '../data/Experiment/query_data_before_time/8_17.csv'
+    targetMu = '../results/VAE_nvib/Index/Query/mu/mu_8_17.csv'
+    targetSigma = '../results/VAE_nvib/Index/Query/sigma/sigma_8_17.csv'
+    targetPi = '../results/VAE_nvib/Index/Query/pi/pi_8_17.csv'
+    targetAlpha = '../results/VAE_nvib/Index/Query/alpha/alpha_8_17.csv'
     queryOutputPath = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/queryTrajectories.csv'
     scoreFile = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/meanLoss.csv'
     targetTrajectories, targetMu_, targetSigma_, targetPi_, tragetAlpha_ = loadData(targetData, targetMu, targetSigma, 

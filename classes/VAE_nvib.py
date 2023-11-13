@@ -19,7 +19,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 grid_num = 50
 vocab_size = grid_num * grid_num +1 #V
-Batch_size = 64 #B
+Batch_size = 16 #B
 trajectory_length = 60
 embedding_dim = 16 # H
 PRIOR_MU = 0
@@ -314,7 +314,7 @@ def training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask,OPT
     train_losses_value = 0
     for idx, src in enumerate(train_loader):
         src = src[0].transpose(0,1).to(device)
-        end = torch.full((1, 64), 2500).to(device)
+        end = torch.full((1, Batch_size), 2500).to(device)
         tgt = torch.cat((src, end), dim=0) #(61,64)
         train_outputs_dict = model(
             src,
@@ -337,7 +337,7 @@ def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, e
     for idx, src in enumerate(test_loader):
         with torch.no_grad():
             src = src[0].transpose(0,1).to(device)
-            end = torch.full((1, 64), 2500).to(device)
+            end = torch.full((1, Batch_size), 2500).to(device)
             tgt = torch.cat((src, end), dim=0)
             # Forward pass
             test_outputs_dict = model(
@@ -389,7 +389,7 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
 
 def encoding(modelPath, encodePart):
     if encodePart == 'History':
-        dataPath = '../data/Experiment/hoGridData/'
+        dataPath = '../data/Experiment/historyGridData/'
     else:
         dataPath = '../data/Experiment/queryGridData/'
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
@@ -425,7 +425,7 @@ def encoding(modelPath, encodePart):
                     result_alpha = []
                     for idx, src in enumerate(predict_loader):
                         src = src[0].transpose(0,1).to(device)
-                        end = torch.full((1, 64), 2500).to(device)
+                        end = torch.full((1, Batch_size), 2500).to(device)
                         tgt = torch.cat((src, end), dim=0)
                         # Forward pass
                         outputs_dict = model(
@@ -436,8 +436,8 @@ def encoding(modelPath, encodePart):
                         ) 
                         mu = outputs_dict["mu"] #(61,64,512)
                         logvar = outputs_dict["logvar"] #(61,64,512)
-                        pi = outputs_dict["pi"].repeat(1,1,512) #(61,64,512)
-                        alpha = outputs_dict["alpha"].repeat(1,1,512) #(61,64,512)
+                        pi = outputs_dict["pi"].repeat(1,1,embedding_dim) #(61,64,512)
+                        alpha = outputs_dict["alpha"].repeat(1,1,embedding_dim) #(61,64,512)
                         result_mu.append(mu.cpu().detach().numpy())
                         result_sigma.append(logvar.cpu().detach().numpy())
                         result_pi.append(pi.cpu().detach().numpy())
@@ -473,7 +473,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode", required=True)
+    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
 
     parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
 
