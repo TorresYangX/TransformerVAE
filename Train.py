@@ -165,8 +165,8 @@ def encoding(modelPath, args):
                         for idx, src in enumerate(predict_loader):
                             src = src[0].to(device)
                             dict = model(src)
-                            mu = dict['mu']
-                            logvar = dict['logvar']
+                            mu = dict['mu'][:, 0, :]
+                            logvar = dict['logvar'][:, 0, :]
                             result_mu.append(mu.cpu().detach().numpy())
                             result_sigma.append(logvar.cpu().detach().numpy())
                         result_mu = np.concatenate(result_mu, axis = 1)
