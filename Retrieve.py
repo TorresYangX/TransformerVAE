@@ -10,11 +10,14 @@ import argparse
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
 
-def loadDataOnly(data, BATCH_SIZE):
+def loadDataOnly(data, BATCH_SIZE, queryOutputPath, reStore):
     trajectories = pd.read_csv(data, header = None)
     trajectories.columns = ['time', 'longitude', 'latitude', 'id']
     resid = int(((len(trajectories) / 60) // BATCH_SIZE) * BATCH_SIZE * 60)
     trajectories = trajectories[:resid]
+    if reStore:
+        with open(queryOutputPath, mode='w') as f:
+            trajectories.to_csv(f, header = None, index = False)
     return trajectories
 
 def loadHistoricalDataOnly(dataPath, BATCH_SIZE, targetData, history):
@@ -26,20 +29,20 @@ def loadHistoricalDataOnly(dataPath, BATCH_SIZE, targetData, history):
             for j in range(24):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
-                    temp =loadDataOnly(dataPath + file, BATCH_SIZE)
+                    temp =loadDataOnly(dataPath + file, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
     else:
         for i in range(int(day)-history, int(day)):
             for j in range(24):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
-                    temp = loadDataOnly(dataPath + file, BATCH_SIZE)
+                    temp = loadDataOnly(dataPath + file, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
         for i in range(int(day), int(day)+1):
             for j in range(int(hour)):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
-                    temp = loadDataOnly(dataPath + file, BATCH_SIZE)
+                    temp = loadDataOnly(dataPath + file, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
     historicalTrajectories = historicalTrajectories.reset_index(drop=True)
     return historicalTrajectories
@@ -84,8 +87,9 @@ def main(args):
     historicalData = '../data/Experiment/history_data_before_time/'
     targetData = '../data/Experiment/query_data_before_time/8_17.csv'
     historicalScore_ = '../results/{}/'.format(args.METHOD)
+    queryOutputPath = '../results/{}/KDTree{}/EMD/queryTrajectories.csv'.format(args.METHOD, args.METHOD)
     scoreFile = '../results/{}/KDTree{}/EMD/meanLoss.csv'.format(args.METHOD, args.METHOD)
-    targetTrajectories = loadDataOnly(targetData, BATCH_SIZE)
+    targetTrajectories = loadDataOnly(targetData, BATCH_SIZE, queryOutputPath, True)
     targetNum = 10
     historicalTrajectories = loadHistoricalDataOnly(historicalData, BATCH_SIZE, targetData, history)
     historicalScore = loadScore(historicalScore_, history)
