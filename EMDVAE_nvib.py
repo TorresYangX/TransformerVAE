@@ -43,7 +43,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, piPath, alphaPath,  BATCH_SI
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
                 piFile = 'pi_{}_{}.csv'.format(i, j)
                 alphaFile = 'alpha_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile) and os.path.exists(piPath + piFile) and os.path.exists(alphaPath + alphaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_, tempPi_, tempAlpha_ =loadData(dataPath+file, muPath+muFile, sigmaPath+sigmaFile, piPath+piFile, alphaPath+alphaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
                     historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
@@ -58,7 +59,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, piPath, alphaPath,  BATCH_SI
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
                 piFile = 'pi_{}_{}.csv'.format(i, j)
                 alphaFile = 'alpha_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile) and os.path.exists(piPath + piFile) and os.path.exists(alphaPath + alphaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_, tempPi_, tempAlpha_ =loadData(dataPath+file, muPath+muFile, sigmaPath+sigmaFile, 
                                                                              piPath+piFile, alphaPath+alphaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
@@ -73,7 +75,8 @@ def loadHistoricalData(dataPath, muPath, sigmaPath, piPath, alphaPath,  BATCH_SI
                 sigmaFile = 'sigma_{}_{}.csv'.format(i, j)
                 piFile = 'pi_{}_{}.csv'.format(i, j)
                 alphaFile = 'alpha_{}_{}.csv'.format(i, j)
-                if os.path.exists(dataPath + file):
+                pathExist = os.path.exists(dataPath + file) and os.path.exists(muPath + muFile) and os.path.exists(sigmaPath + sigmaFile) and os.path.exists(piPath + piFile) and os.path.exists(alphaPath + alphaFile)
+                if pathExist:
                     temp, tempMu_, tempSigma_, tempPi_, tempAlpha_ =loadData(dataPath+file, muPath+muFile, sigmaPath+sigmaFile,
                                                                             piPath+piFile, alphaPath+alphaFile, BATCH_SIZE, None, False)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
