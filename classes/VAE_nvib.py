@@ -389,9 +389,9 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
 
 def encoding(modelPath, encodePart):
     if encodePart == 'History':
-        dataPath = '../data/Experiment/historyGridData/'
+        dataPath = '../data/Experiment/history/historyGridData/'
     else:
-        dataPath = '../data/Experiment/queryGridData/'
+        dataPath = '../data/Experiment/query/queryGridData/'
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
@@ -434,10 +434,12 @@ def encoding(modelPath, encodePart):
                             src_key_padding_mask=src_key_padding_mask,
                             tgt_key_padding_mask=tgt_key_padding_mask,
                         ) 
-                        mu = outputs_dict["mu"] #(61,64,512)
-                        logvar = outputs_dict["logvar"] #(61,64,512)
-                        pi = outputs_dict["pi"].repeat(1,1,embedding_dim) #(61,64,512)
-                        alpha = outputs_dict["alpha"].repeat(1,1,embedding_dim) #(61,64,512)
+                        mu = outputs_dict["mu"].mean(dim=0, keepdim=True) #(1,16,16)
+                        logvar = outputs_dict["logvar"].mean(dim=0, keepdim=True) #(1,16,16)
+                        pi = outputs_dict["pi"].repeat(1,1,embedding_dim) #(61,16,16)
+                        alpha = outputs_dict["alpha"].repeat(1,1,embedding_dim) #(61,16,16)
+                        pi = pi.mean(dim=0, keepdim=True) #(1,16,16)
+                        alpha = alpha.mean(dim=0, keepdim=True) #(1,16,16)
                         result_mu.append(mu.cpu().detach().numpy())
                         result_sigma.append(logvar.cpu().detach().numpy())
                         result_pi.append(pi.cpu().detach().numpy())
