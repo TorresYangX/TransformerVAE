@@ -33,5 +33,5 @@ if __name__ == '__main__':
     if not os.path.exists(groundTruthPath):
         os.mkdir(groundTruthPath)
     groundTruthPath = '../data/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
-    dataPath = '../data/Experiment/history/history_data_before_time/'
+    dataPath = '../data/Experiment/experiment_data_before_time/'
     getGroundTruth(args, groundTruthPath, dataPath)
