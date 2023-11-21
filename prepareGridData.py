@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import trange
+import argparse
 
 lat1 = 39.6
 lat2 = 40.2
@@ -87,15 +88,26 @@ def prepareGridData(filePath, file, outputFilePath):
     np.save(outputFilePath + filename, output_)
     return 0
 
+def main(args):
+    header1 = '../data/Train/'
+    header2 = '../data/Experiment/'
+    if args.model == 'train':
+        header = header1
+    else:
+        header = header2
+    filePath = header + '{}_data_before_time/'.format(args.model)
+    outputFilePath = header + '{}GridData/'.format(args.model)
+    filelist = findfile(filePath)
+    print("Start preparing grid data...")
+    for i in trange(0, len(filelist)):
+        prepareGridData(filePath, filelist[i], outputFilePath)
+    print("Finish preparing grid data.")
+
+
 if __name__ == '__main__':
-    filePath = '../data/Experiment/history_data_before_time/'
-    outputFilePath = '../data/Experiment/historyGridData/'
-    filelist = findfile(filePath)
-    for i in trange(0, len(filelist)):
-        prepareGridData(filePath, filelist[i], outputFilePath)
-    filePath = '../data/Experiment/query_data_before_time/'
-    outputFilePath = '../data/Experiment/queryGridData/'
-    filelist = findfile(filePath)
-    for i in trange(0, len(filelist)):
-        prepareGridData(filePath, filelist[i], outputFilePath)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', type=str, default='train', choices=["train","experiment"], required=True)
+    args = parser.parse_args()
+    main(args)
+    
             
