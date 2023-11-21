@@ -11,36 +11,35 @@ embedding_dim = 16
 trajectory_length = 60
 
 
-def loadData(data, BATCH_SIZE, **kwargs):
-    trajectories = pd.read_csv(data, header = None)
+def loadData(data, BATCH_SIZE, day, hour,  **kwargs):
+    trajectories = pd.read_csv(data+"{}_{}.csv".format(day,hour), header = None)
     trajectories.columns = ['time', 'longitude', 'latitude', 'id']
     resid = int(((len(trajectories) / 60) // BATCH_SIZE) * BATCH_SIZE * 60)
     trajectories = trajectories[:resid]
-    ## return a dict of output according to the kwargs.keys()
     output = {}
     for key in kwargs.keys():
-        if key == 'targetProb':
-            prob_ = pd.read_csv(kwargs[key], header = None)
+        if key == 'Prob':
+            prob_ = pd.read_csv(kwargs[key]+"prob_{}_{}.csv".format(day, hour), header = None)
             if int(len(trajectories)/trajectory_length) != len(prob_):
                 print('something wrong!')
             output[key] = prob_
-        elif key == 'targetMu':
-            mu_ = pd.read_csv(kwargs[key], header = None)
+        elif key == 'Mu':
+            mu_ = pd.read_csv(kwargs[key]+"mu_{}_{}.csv".format(day, hour), header = None)
             if int(len(trajectories)/trajectory_length) != len(mu_):
                 print('something wrong!')
             output[key] = mu_
-        elif key == 'targetSigma':
-            sigma_ = pd.read_csv(kwargs[key], header = None)
+        elif key == 'Sigma':
+            sigma_ = pd.read_csv(kwargs[key]+"sigma_{}_{}.csv".format(day, hour), header = None)
             if int(len(trajectories)/trajectory_length) != len(sigma_):
                 print('something wrong!')
             output[key] = sigma_
-        elif key == 'targetPi':
-            pi_ = pd.read_csv(kwargs[key], header = None)
+        elif key == 'Pi':
+            pi_ = pd.read_csv(kwargs[key]+"pi_{}_{}.csv".format(day, hour), header = None)
             if int(len(trajectories)/trajectory_length) != len(pi_):
                 print('something wrong!')
             output[key] = pi_
-        elif key == 'targetAlpha':
-            alpha_ = pd.read_csv(kwargs[key], header = None)
+        elif key == 'Alpha':
+            alpha_ = pd.read_csv(kwargs[key]+"alpha_{}_{}.csv".format(day, hour), header = None)
             if int(len(trajectories)/trajectory_length) != len(alpha_):
                 print('something wrong!')
             output[key] = alpha_
@@ -48,9 +47,7 @@ def loadData(data, BATCH_SIZE, **kwargs):
             print('wrong key!')
     return trajectories, output
 
-def loadHistoricalData(dataPath, BATCH_SIZE, targetData, history, **kwargs):
-    day = targetData.split('/')[-1].split('_')[0]
-    hour = targetData.split('/')[-1].split('_')[1].split('.')[0]
+def loadHistoricalData(dataPath, BATCH_SIZE, day, hour, history, **kwargs):
     historicalTrajectories = pd.DataFrame()
     historicalProb_ = pd.DataFrame()
     historicalMu_ = pd.DataFrame()
@@ -62,73 +59,63 @@ def loadHistoricalData(dataPath, BATCH_SIZE, targetData, history, **kwargs):
             file = '{}_{}.csv'.format(i, j)
             pathExist = os.path.exists(dataPath + file)
             for key in kwargs.keys():
-                if key == 'historicalProb':
+                if key == 'Prob':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'prob_{}_{}.csv'.format(i, j))
-                elif key == 'historicalMu':
+                elif key == 'Mu':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'mu_{}_{}.csv'.format(i, j))
-                elif key == 'historicalSigma':
+                elif key == 'Sigma':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'sigma_{}_{}.csv'.format(i, j))
-                elif key == 'historicalPi':
+                elif key == 'Pi':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'pi_{}_{}.csv'.format(i, j))
-                elif key == 'historicalAlpha':
+                elif key == 'Alpha':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'alpha_{}_{}.csv'.format(i, j))
                 else:
                     print('wrong key!')
             if pathExist:
-                for key in kwargs.keys():
-                    if key == 'historicalProb':
-                        temp_ = pd.read_csv(kwargs[key] + 'prob_{}_{}.csv'.format(i, j), header = None)
-                        historicalProb_ = pd.concat([historicalProb_, temp_], axis=0)
-                    elif key == 'historicalMu':
-                        tempMu_ = pd.read_csv(kwargs[key] + 'mu_{}_{}.csv'.format(i, j), header = None)
-                        historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
-                    elif key == 'historicalSigma':
-                        tempSigma_ = pd.read_csv(kwargs[key] + 'sigma_{}_{}.csv'.format(i, j), header = None)
-                        historicalSigma_ = pd.concat([historicalSigma_, tempSigma_], axis=0)
-                    elif key == 'historicalPi':
-                        tempPi_ = pd.read_csv(kwargs[key] + 'pi_{}_{}.csv'.format(i, j), header = None)
-                        historicalPi_ = pd.concat([historicalPi_, tempPi_], axis=0)
-                    elif key == 'historicalAlpha':
-                        tempAlpha_ = pd.read_csv(kwargs[key] + 'alpha_{}_{}.csv'.format(i, j), header = None)
-                        historicalAlpha_ = pd.concat([historicalAlpha_, tempAlpha_], axis=0)
-                    else:
-                        print('wrong key!')
+                temp, tempDict = loadData(dataPath, BATCH_SIZE, i, j, **kwargs)
+                historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
+                if 'Prob' in tempDict.keys():
+                    historicalProb_ = pd.concat([historicalProb_, tempDict['Prob']], axis=0)
+                if 'Mu' in tempDict.keys():
+                    historicalMu_ = pd.concat([historicalMu_, tempDict['Mu']], axis=0)
+                if 'Sigma' in tempDict.keys():
+                    historicalSigma_ = pd.concat([historicalSigma_, tempDict['Sigma']], axis=0)
+                if 'Pi' in tempDict.keys():
+                    historicalPi_ = pd.concat([historicalPi_, tempDict['Pi']], axis=0)
+                if 'Alpha' in tempDict.keys():
+                    historicalAlpha_ = pd.concat([historicalAlpha_, tempDict['Alpha']], axis=0)
+                
     for i in range(int(day), int(day)+1):
         for j in range(int(hour)):
             file = '{}_{}.csv'.format(i, j)
             pathExist = os.path.exists(dataPath + file)
             for key in kwargs.keys():
-                if key == 'historicalProb':
+                if key == 'Prob':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'prob_{}_{}.csv'.format(i, j))
-                elif key == 'historicalMu':
+                elif key == 'Mu':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'mu_{}_{}.csv'.format(i, j))
-                elif key == 'historicalSigma':
+                elif key == 'Sigma':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'sigma_{}_{}.csv'.format(i, j))
-                elif key == 'historicalPi':
+                elif key == 'Pi':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'pi_{}_{}.csv'.format(i, j))
-                elif key == 'historicalAlpha':
+                elif key == 'Alpha':
                     pathExist = pathExist and os.path.exists(kwargs[key] + 'alpha_{}_{}.csv'.format(i, j))
                 else:
                     print('wrong key!')
             if pathExist:
-                for key in kwargs.keys():
-                    if key == 'historicalProb':
-                        temp_ = pd.read_csv(kwargs[key] + 'prob_{}_{}.csv'.format(i, j), header = None)
-                        historicalProb_ = pd.concat([historicalProb_, temp_], axis=0)
-                    elif key == 'historicalMu':
-                        tempMu_ = pd.read_csv(kwargs[key] + 'mu_{}_{}.csv'.format(i, j), header = None)
-                        historicalMu_ = pd.concat([historicalMu_, tempMu_], axis=0)
-                    elif key == 'historicalSigma':
-                        tempSigma_ = pd.read_csv(kwargs[key] + 'sigma_{}_{}.csv'.format(i, j), header = None)
-                        historicalSigma_ = pd.concat([historicalSigma_, tempSigma_], axis=0)
-                    elif key == 'historicalPi':
-                        tempPi_ = pd.read_csv(kwargs[key] + 'pi_{}_{}.csv'.format(i, j), header = None)
-                        historicalPi_ = pd.concat([historicalPi_, tempPi_], axis=0)
-                    elif key == 'historicalAlpha':
-                        tempAlpha_ = pd.read_csv(kwargs[key] + 'alpha_{}_{}.csv'.format(i, j), header = None)
-                        historicalAlpha_ = pd.concat([historicalAlpha_, tempAlpha_], axis=0)
-                    else:
-                        print('wrong key!')
+                temp, tempDict = loadData(dataPath, BATCH_SIZE, i, j, **kwargs)
+                historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
+                if 'Prob' in tempDict.keys():
+                    historicalProb_ = pd.concat([historicalProb_, tempDict['Prob']], axis=0)
+                if 'Mu' in tempDict.keys():
+                    historicalMu_ = pd.concat([historicalMu_, tempDict['Mu']], axis=0)
+                if 'Sigma' in tempDict.keys():
+                    historicalSigma_ = pd.concat([historicalSigma_, tempDict['Sigma']], axis=0)
+                if 'Pi' in tempDict.keys():
+                    historicalPi_ = pd.concat([historicalPi_, tempDict['Pi']], axis=0)
+                if 'Alpha' in tempDict.keys():
+                    historicalAlpha_ = pd.concat([historicalAlpha_, tempDict['Alpha']], axis=0)
+
     historicalTrajectories = historicalTrajectories.reset_index(drop=True)
     historicalProb_ = historicalProb_.reset_index(drop=True)
     historicalMu_ = historicalMu_.reset_index(drop=True)
@@ -165,66 +152,45 @@ def main(args):
     path_ = '../results/{}/KDTree{}/EMD/'.format(args.model, args.model)
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../data/Experiment/query/query_data_before_time/'
-    targetData = '../data/Experiment/query/query_data_before_time/{}_{}.csv'.format(args.day, args.hour)
+    historicalData = '../data/Experiment/experiment_data_before_time/'
+    targetData = '../data/Experiment/experiment_data_before_time/'
     para = {
         "AE": {
-            'history':{
-                'historicalProb':'../results/AE/Index/Query/prob/'
-            },
-            'target':{
-                'targetProb' : '../results/AE/Index/Query/prob/prob_8_17.csv'
-            }
+            'Prob':'../results/AE/Index/prob/'
         },
         "VAE": {
-            'history':{
-                'historicalMu':'../results/VAE/Index/Query/mu/',
-                'historicalSigma': '../results/VAE/Index/Query/sigma/'
-            },
-            'target':{
-                'targetMu' : '../results/VAE/Index/Query/mu/mu_8_17.csv',
-                'targetSigma' : '../results/VAE/Index/Query/sigma/sigma_8_17.csv'
-            }
-
+            'Mu':'../results/VAE/Index/mu/',
+            'Sigma': '../results/VAE/Index/sigma/'
         },
         "VAE_nvib": {
-            'history':{
-                'historicalMu':'../results/VAE_nvib/Index/Query/mu/',
-                'historicalSigma': '../results/VAE_nvib/Index/Query/sigma/',
-                'historicalPi': '../results/VAE_nvib/Index/Query/pi/',
-                'historicalAlpha': '../results/VAE_nvib/Index/Query/alpha/'
-            },
-            'target':{
-                 'targetMu' : '../results/VAE_nvib/Index/Query/mu/mu_8_17.csv',
-                'targetSigma' : '../results/VAE_nvib/Index/Query/sigma/sigma_8_17.csv',
-                'targetPi' : '../results/VAE_nvib/Index/Query/pi/pi_8_17.csv',
-                'targetAlpha' : '../results/VAE_nvib/Index/Query/alpha/alpha_8_17.csv'
-            }
+            'Mu':'../results/VAE_nvib/Index/mu/',
+            'Sigma': '../results/VAE_nvib/Index/sigma/',
+            'Pi': '../results/VAE_nvib/Index/pi/',
+            'Alpha': '../results/VAE_nvib/Index/alpha/'
         }
 
     }
     
-
     groundTruthPath = '../data/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
     scoreFile = '../results/{}/KDTree{}/EMD/meanLoss.csv'.format(args.model, args.model)
-    targetTrajectories, targetDict = loadData(targetData, BATCH_SIZE, **(para[args.model]['target']))
+    targetTrajectories, targetDict = loadData(targetData, BATCH_SIZE, args.day, args.hour, **(para[args.model]))
     targerLen = len(targetTrajectories)
     groundTruthLen = len(pd.read_csv(groundTruthPath, header = None))
     print('target length: {}'.format(targerLen))
     print('ground truth length: {}'.format(groundTruthLen))
     targetProb_ = pd.concat(targetDict.values(), axis=1)
-    print(targetProb_.shape)
+    targetProb_ = targetProb_.values
     targetNum = int(groundTruthLen / targerLen)
     print('targetNum: {}'.format(targetNum))
     historicalTrajectories, historicalProb_, historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_ = loadHistoricalData(historicalData, BATCH_SIZE, 
-                                                                                                                  targetData, history=6, **(para[args.model]['history']))
+                                                                                                                  args.day, args.hour, 
+                                                                                                                  history=6, **(para[args.model]))
     historicalProb_ = pd.concat([historicalProb_, historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_], axis=1)
     historicalProb_ = historicalProb_.values
-    print(historicalProb_.shape)
     retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.model, args.model)
-    # retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories, len(para[args.model]['history']))
-    # retrievalLen = len(pd.read_csv(retrievedTrajectories, header = None))
-    # print('retrieval length: {}'.format(retrievalLen))
+    retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories, len(para[args.model]))
+    retrievalLen = len(pd.read_csv(retrievedTrajectories, header = None))
+    print('retrieval length: {}'.format(retrievalLen))
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
