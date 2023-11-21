@@ -80,7 +80,7 @@ def main(args):
     print('preProcessing traindata...')
     preprocess(args.STARTDAY, args.ENDDAY, filePath, outputFilePath, args.STARTID, args.ENDID)
     print('preProcessing traindata Done!')
-    outputFilePath_ = header+'{}/{}_data_before_time/'.format(args.MODEL, args.MODEL)
+    outputFilePath_ = header+'{}_data_before_time/'.format(args.MODEL, args.MODEL)
     if not os.path.exists(outputFilePath_):
         os.makedirs(outputFilePath_)
     print('preProcessing according time...')
@@ -91,7 +91,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-m", "--MODEL", type=str, default="train", choices=["train","history","query"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="train", choices=["train","experiment"], required=True)
 
     parser.add_argument("-s", "--STARTDAY", type=int, default=2,help="start day", required=True)
 
