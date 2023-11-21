@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 
 from classes.VAE import VAE
 from classes.AE import AE
-from classes.VAE_attention import VAE_attention
 
 
 BATCH_SIZE = 16
@@ -113,7 +112,6 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, args):
     model = {
         "VAE": VAE,
         "AE": AE,
-        "VAEA": VAE_attention,
     }[args.MODEL](embedding_dim, hidden_dim, latent_dim, vocab_size, BATCH_SIZE, trajectory_length).to(device)
     optimizer = optim.RMSprop(model.parameters(),lr=learning_rate)
     
@@ -141,17 +139,17 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, args):
     plt.show()
 
 def encoding(modelPath, args):
-    if args.encodePart == 'History':
-        dataPath = '../data/Experiment/historyGridData/'
-    else:
-        dataPath = '../data/Experiment/queryGridData/'
-    for i in range(2, 9):
+    dataPath = '../data/Experiment/experimentGridData/'
+    indexPath = '../results/{}/Index/'.format(args.MODEL)
+    if not os.path.exists(indexPath):
+        os.makedirs(indexPath)
+    for i in trange(2, 9):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
             if os.path.exists(dataPath+FILE):
-                muFILE = '../results/{}/Index/{}/mu/mu_{}_{}.csv'.format(args.MODEL, args.encodePart, i, j)
-                sigmaFILE = '../results/{}/Index/{}/sigma/sigma_{}_{}.csv'.format(args.MODEL, args.encodePart, i, j)
-                probFILE = '../results/{}/Index/{}/prob/prob_{}_{}.csv'.format(args.MODEL, args.encodePart, i, j)
+                muFILE = '../results/{}/Index/mu/mu_{}_{}.csv'.format(args.MODEL, i, j)
+                sigmaFILE = '../results/{}/Index/sigma/sigma_{}_{}.csv'.format(args.MODEL, i, j)
+                probFILE = '../results/{}/Index/prob/prob_{}_{}.csv'.format(args.MODEL, i, j)
                 x = constructSingleData(dataPath, FILE, BATCH_SIZE)
                 if x.shape[0] > 0:
                     predict_data = np.array(x)
@@ -191,7 +189,7 @@ def main(args):
     save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
     trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
     trainFilePath = '../data/Train/trainGridData/'
-    if args.TRAIN:
+    if args.TASK=="train":
         trainModel(trainFilePath, save_model, trainlog, args)
     else:
         encoding(save_model, args)
@@ -202,9 +200,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
-
-    parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
+    parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
 
     parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE"], required=True)
 
