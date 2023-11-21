@@ -236,7 +236,7 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     return 0
     
 if __name__ == '__main__':
-    data = pd.read_csv('../data/Experiment/history_data_before_time/8_7.csv', header=None)
+    data = pd.read_csv('../data/Experiment/experiment_data_before_time/8_7.csv', header=None)
     data.columns = ['time', 'lon', 'lat', 'id']
     choose1 = data[data.id == 89]
     choose2 = data[data.id == 96] 
