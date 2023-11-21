@@ -387,31 +387,28 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
     torch.save(model, modelSavePath)
 
 
-def encoding(modelPath, encodePart):
-    if encodePart == 'History':
-        dataPath = '../data/Experiment/history/historyGridData/'
-    else:
-        dataPath = '../data/Experiment/query/queryGridData/'
+def encoding(modelPath):
+    dataPath = '../data/Experiment/experimentGridData/'
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
     tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
-    if not os.path.exists('../results/VAE_nvib/Index/{}/mu/'.format(encodePart)):
-        os.makedirs('../results/VAE_nvib/Index/{}/mu/'.format(encodePart))
-    if not os.path.exists('../results/VAE_nvib/Index/{}/sigma/'.format(encodePart)):
-        os.makedirs('../results/VAE_nvib/Index/{}/sigma/'.format(encodePart))
-    if not os.path.exists('../results/VAE_nvib/Index/{}/pi/'.format(encodePart)):
-        os.makedirs('../results/VAE_nvib/Index/{}/pi/'.format(encodePart))
-    if not os.path.exists('../results/VAE_nvib/Index/{}/alpha/'.format(encodePart)):
-        os.makedirs('../results/VAE_nvib/Index/{}/alpha/'.format(encodePart))
-    for i in range(2, 9):
+    if not os.path.exists('../results/VAE_nvib/Index/mu/'):
+        os.makedirs('../results/VAE_nvib/Index/mu/')
+    if not os.path.exists('../results/VAE_nvib/Index/sigma/'):
+        os.makedirs('../results/VAE_nvib/Index/sigma/')
+    if not os.path.exists('../results/VAE_nvib/Index/pi/'):
+        os.makedirs('../results/VAE_nvib/Index/pi/')
+    if not os.path.exists('../results/VAE_nvib/Index/alpha/'):
+        os.makedirs('../results/VAE_nvib/Index/alpha/')
+    for i in trange(2, 9):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
             if os.path.exists(dataPath+FILE):
-                muFILE = '../results/VAE_nvib/Index/{}/mu/mu_{}_{}.csv'.format(encodePart, i, j)
-                sigmaFILE = '../results/VAE_nvib/Index/{}/sigma/sigma_{}_{}.csv'.format(encodePart, i, j)
-                piFILE = '../results/VAE_nvib/Index/{}/pi/pi_{}_{}.csv'.format(encodePart, i, j)
-                alphaFILE = '../results/VAE_nvib/Index/{}/alpha/alpha_{}_{}.csv'.format(encodePart, i, j)
+                muFILE = '../results/VAE_nvib/Index/mu/mu_{}_{}.csv'.format(i, j)
+                sigmaFILE = '../results/VAE_nvib/Index/sigma/sigma_{}_{}.csv'.format( i, j)
+                piFILE = '../results/VAE_nvib/Index/pi/pi_{}_{}.csv'.format(i, j)
+                alphaFILE = '../results/VAE_nvib/Index/alpha/alpha_{}_{}.csv'.format(i, j)
                 x = constructSingleData(dataPath, FILE, Batch_size)
                 if x.shape[0] > 0:
                     predict_data = np.array(x)
@@ -466,18 +463,16 @@ def main(args):
     save_model = '../results/VAE_nvib/VAE_nvib.pt'
     trainlog = '../results/VAE_nvib/trainlog.csv'
     trainFilePath = '../data/Train/trainGridData/'
-    if args.TRAIN:
+    if args.model=="train":
         trainModel(trainFilePath, save_model, trainlog)
     else:
-        encoding(save_model, args.encodePart)
+        encoding(save_model)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--TRAIN", type=bool, default=False, help="train or encode")
-
-    parser.add_argument("-e", "--encodePart", type=str, default='History', choices=["History","Query"],help="encode History or Query")
+    parser.add_argument("-m", "--model", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
 
     args = parser.parse_args()
 
