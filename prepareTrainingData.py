@@ -9,6 +9,7 @@ from math import sin, cos, sqrt, atan2, radians
 import glob
 import os
 from tqdm import trange
+import argparse
 
 def findfile(filePath):
     original_path = os.getcwd()
@@ -74,20 +75,27 @@ def prepareData(filePath, file, outputFilePath):
     np.save(outputFilePath + filename, output_)
     return 0
 
-if __name__ == '__main__':
-    filePath = '../data/train_data_before_time/'
-    outputFilePath = '../data/trainingData/'
+def main(args):
+    header1 = '../data/Train/'
+    header2 = '../data/Experiment/'
+    if args.model == 'train':
+        header = header1
+    else:
+        header = header2
+    filePath = header + '{}_data_before_time/'.format(args.model)
+    outputFilePath = header + '{}Data/'.format(args.model)
     filelist = findfile(filePath)
     print('Start prepare training data')
     for i in trange(0, len(filelist)):
         prepareData(filePath, filelist[i], outputFilePath)
     print('Done!')
-    filePath = '../data/query_data_before_time/'
-    outputFilePath = '../data/queryData/'
-    filelist = findfile(filePath)
-    print('Start prepare query data')
-    for i in trange(0, len(filelist)):
-        prepareData(filePath, filelist[i], outputFilePath)
-    print('Done!')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', type=str, default='train', choices=["train","experiment"], required=True)
+    args = parser.parse_args()
+    main(args)
+    
 
             
