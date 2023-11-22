@@ -45,11 +45,7 @@ def loadHistoricalDataOnly(dataPath, BATCH_SIZE, targetData, history):
     return historicalTrajectories
 
 def loadScore(path, history):
-    container = np.load(path + 'history_1.npy')
-    for i in range(2, int(history+1)):
-        dataPath = path + 'history_{}.npy'.format(i)
-        temp = np.load(dataPath)
-        container = np.append(container, temp, axis=1)
+    container = np.load(path + 'history_6.npy')
     return container
         
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
@@ -61,7 +57,6 @@ def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
 def retrieval(scoreFile, historicalScore, targetNum, retrievedTrajectories, historicalTrajectories):
     solution = []
     wf = open(scoreFile, mode='w')
-    print(historicalScore.shape)
     for i in range(len(historicalScore)):
         nearest_dist = historicalScore[i, np.argpartition(historicalScore[i], range(targetNum))[:targetNum]]
         nearest_ind = np.argpartition(historicalScore[i], range(targetNum))[:targetNum]
@@ -106,7 +101,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-m", "--METHOD", type=str, default="LCSS", choices=["LCSS","EDR","EDwP"], required=True)
+    parser.add_argument("-m", "--METHOD", type=str, default="LCSS", choices=["LCSS","EDR","EDwP","DTW"], required=True)
 
     parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
 

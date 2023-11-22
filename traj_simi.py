@@ -13,25 +13,25 @@ def loadData(data, BATCH_SIZE):
     trajectories = trajectories[:resid]
     return trajectories
 
-def loadHistoricalDataByDay(dataPath, BATCH_SIZE, targetData, history):
-    day = targetData.split('/')[-1].split('_')[0] 
-    hour = targetData.split('/')[-1].split('_')[1].split('.')[0] # 7
+def loadHistoricalData(dataPath, BATCH_SIZE, targetData, history):
+    day = targetData.split('/')[-1].split('_')[0]
+    hour = targetData.split('/')[-1].split('_')[1].split('.')[0]
     historicalTrajectories = pd.DataFrame()
     if int(hour) == 0:
-        for i in range(int(day)-history, int(day)-history+1):
+        for i in range(int(day)-history, int(day)):
             for j in range(24):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
                     temp =loadData(dataPath + file, BATCH_SIZE)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
     else:
-        for i in range(int(day)-history, int(day)-history+1):
+        for i in range(int(day)-history, int(day)):
             for j in range(24):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
                     temp = loadData(dataPath + file, BATCH_SIZE)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
-        for i in range(int(day)-history+1, int(day)-history+1+1):
+        for i in range(int(day), int(day)+1):
             for j in range(int(hour)):
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
@@ -196,7 +196,7 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     targetTraj = loadData(targetData, BATCH_SIZE)
     targetDataNum = int(len(targetTraj)/60)
     print(targetDataNum)
-    historicalTraj = loadHistoricalDataByDay(historicalData, BATCH_SIZE, targetData, history)
+    historicalTraj = loadHistoricalData(historicalData, BATCH_SIZE, targetData, history)
     historicalDataNum = int(len(historicalTraj)/60)
     print(historicalDataNum)
     targetTrajectories_ = np.array([list(a) for a in zip(targetTraj.latitude.tolist(), targetTraj.longitude.tolist())]).reshape((int(len(targetTraj)/60), 60, 2))
