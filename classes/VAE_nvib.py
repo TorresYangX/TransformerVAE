@@ -218,7 +218,6 @@ class TransformerNvib(nn.Module):
         self.transformer_decoder = TransformerDecoder()
         self.output_proj = nn.Linear(embedding_dim, vocab_size)
         self.drop = nn.Dropout(dropout)
-        self.softmax = nn.Softmax(dim=2)
 
     def encode(self,src, src_key_padding_mask):
         src = self.token_embedding(src.to(torch.int64).to(device)) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
@@ -240,7 +239,6 @@ class TransformerNvib(nn.Module):
             memory_key_padding_mask=memory_key_padding_mask, # [B,Nt] (64,61)
         )
         logits = self.output_proj(output)  # [Nt,B,V]
-        logits = self.softmax(logits)
         return logits
 
     def loss(self, logits, targets, epoch,  **kwargs):
