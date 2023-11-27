@@ -13,7 +13,7 @@ def normalize(trajectories):
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(groundTruth, reterievedTrajectories_, method, NLAT=32, NLON=36):
+def cityEMD(groundTruth, reterievedTrajectories_, method, NLAT=40, NLON=40):
     targetX = normalize(groundTruth)
     print('targetX.shape: {}'.format(targetX.shape))
     retrievedY = normalize(reterievedTrajectories_)
