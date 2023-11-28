@@ -20,7 +20,6 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 grid_num = 50
 vocab_size = grid_num * grid_num +1 #V
 Batch_size = 16 #B
-trajectory_length = 60
 embedding_dim = 16 # H
 PRIOR_MU = 0
 PRIOR_VAR = 1
@@ -35,13 +34,13 @@ KL_ANNEALING_DIRICHLET = "constant"
 
 dropout = 0.1
 learning_rate = 0.001
-MAX_EPOCH = 10
+MAX_EPOCH = 20
 ACCUMULATION_STEPS = 1
 
 def constructTrainingData(filePath, BATCH_SIZE):
     x = []
     for file in os.listdir(filePath):
-        data = np.load(filePath + file)
+        data = np.load(filePath + file, allow_pickle=True)
         x.extend(data)
     x = np.array(x)
     resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
@@ -351,7 +350,7 @@ def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, e
     return test_losses_value / len(test_loader.dataset)
 
 
-def trainModel(trainFilePath, modelSavePath, trainlogPath):
+def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length):
     x = constructTrainingData(trainFilePath, Batch_size)
     # split traindata and testdata
     train_data = x[:int(len(x)*15/16), :]
@@ -385,28 +384,38 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath):
     torch.save(model, modelSavePath)
 
 
-def encoding(modelPath):
-    dataPath = '../data/Experiment/experimentGridData/'
+def encoding(modelPath, dataPath, trajectory_length, isSSN):
     mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
     tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
-    if not os.path.exists('../results/VAE_nvib/Index/mu/'):
-        os.makedirs('../results/VAE_nvib/Index/mu/')
-    if not os.path.exists('../results/VAE_nvib/Index/sigma/'):
-        os.makedirs('../results/VAE_nvib/Index/sigma/')
-    if not os.path.exists('../results/VAE_nvib/Index/pi/'):
-        os.makedirs('../results/VAE_nvib/Index/pi/')
-    if not os.path.exists('../results/VAE_nvib/Index/alpha/'):
-        os.makedirs('../results/VAE_nvib/Index/alpha/')
+    if not isSSN:
+        muFolder = '../results/VAE_nvib/Index/mu/'
+        sigmaFolder = '../results/VAE_nvib/Index/sigma/'
+        piFolder = '../results/VAE_nvib/Index/pi/'
+        alphaFolder = '../results/VAE_nvib/Index/alpha/'
+    else:
+        dbNUM = dataPath.split('/')[-3]
+        muFolder = '../SSN_KNN/VAE_nvib/Index/{}/mu/'.format(dbNUM)
+        sigmaFolder = '../SSN_KNN/VAE_nvib/Index/{}/sigma/'.format(dbNUM)
+        piFolder = '../SSN_KNN/VAE_nvib/Index/{}/pi/'.format(dbNUM)
+        alphaFolder = '../SSN_KNN/VAE_nvib/Index/{}/alpha/'.format(dbNUM)
+    if not os.path.exists(muFolder):
+        os.makedirs(muFolder)
+    if not os.path.exists(sigmaFolder):
+        os.makedirs(sigmaFolder)
+    if not os.path.exists(piFolder):
+        os.makedirs(piFolder)
+    if not os.path.exists(alphaFolder):
+        os.makedirs(alphaFolder)
     for i in trange(2, 9):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
             if os.path.exists(dataPath+FILE):
-                muFILE = '../results/VAE_nvib/Index/mu/mu_{}_{}.csv'.format(i, j)
-                sigmaFILE = '../results/VAE_nvib/Index/sigma/sigma_{}_{}.csv'.format( i, j)
-                piFILE = '../results/VAE_nvib/Index/pi/pi_{}_{}.csv'.format(i, j)
-                alphaFILE = '../results/VAE_nvib/Index/alpha/alpha_{}_{}.csv'.format(i, j)
+                muFILE = muFolder + 'mu_{}_{}.csv'.format(i, j)
+                sigmaFILE = sigmaFolder + 'sigma_{}_{}.csv'.format( i, j)
+                piFILE = piFolder + 'pi_{}_{}.csv'.format(i, j)
+                alphaFILE = alphaFolder + 'alpha_{}_{}.csv'.format(i, j)
                 x = constructSingleData(dataPath, FILE, Batch_size)
                 if x.shape[0] > 0:
                     predict_data = np.array(x)
@@ -455,22 +464,46 @@ def encoding(modelPath):
 
 
 def main(args):
-    root = '../results/VAE_nvib/'
-    if not os.path.exists(root):
-        os.makedirs(root)
-    save_model = '../results/VAE_nvib/VAE_nvib.pt'
-    trainlog = '../results/VAE_nvib/trainlog.csv'
-    trainFilePath = '../data/Train/trainGridData/'
-    if args.model=="train":
-        trainModel(trainFilePath, save_model, trainlog)
+    if not args.SSN_KNN:
+        trajectory_length = 60
+        root = '../results/VAE_nvib/'
+        if not os.path.exists(root):
+            os.makedirs(root)
+        save_model = '../results/VAE_nvib/VAE_nvib.pt'
+        trainlog = '../results/VAE_nvib/trainlog.csv'
+        trainFilePath = '../data/Train/trainGridData/'
+        dataPath = '../data/Experiment/experimentGridData/'
+        if args.model=="train":
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length)
+        else:
+            encoding(save_model, dataPath, args.trajLen, trajectory_length)
     else:
-        encoding(save_model)
+        trajectory_length = 30
+        root = '../SSN_KNN/'
+        if not os.path.exists(root):
+            os.makedirs(root)
+        root = root + 'VAE_nvib/'
+        if not os.path.exists(root):
+            os.makedirs(root)
+        save_model = '../SSN_KNN/VAE_nvib/VAE_nvib.pt'
+        trainlog = '../SSN_KNN/VAE_nvib/trainlog.csv'
+        trainFilePath = '../data/Train/SSM_KNN/Database/GridData/'
+        dataPath_1 = '../data/Experiment/SSM_KNN/Database_1/GridData/'
+        dataPath_2 = '../data/Experiment/SSM_KNN/Database_2/GridData/'
+        if args.model=="train":
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length)
+        else:
+            encoding(save_model, dataPath_1, trajectory_length, args.SSN_KNN)
+            encoding(save_model, dataPath_2, trajectory_length, args.SSN_KNN)
+
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-m", "--model", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
+
+    parser.add_argument("-s", "--SSN_KNN", type=bool, default=False, required=True)
 
     args = parser.parse_args()
 
