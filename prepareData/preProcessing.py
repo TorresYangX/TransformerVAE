@@ -12,6 +12,10 @@ import argparse
 # time range: 2.1-2.8
 # trajectory length: 60
 
+#input: '../data/seperatedData/'
+#output: '../data/{}/{}_data_before/'
+#output: '../data/{}/{}_data_before_time/'
+
 def preprocess(START, END, filePath, outputFilePath, startid, endid):
     for id_num in trange(startid, endid):
         file = str(id_num) + '.txt'
