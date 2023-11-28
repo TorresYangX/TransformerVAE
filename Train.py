@@ -17,7 +17,6 @@ from classes.AE import AE
 BATCH_SIZE = 16
 grid_num = 50
 vocab_size = grid_num * grid_num
-trajectory_length = 60
 dropout = 0.1
 learning_rate = 0.001
 embedding_dim = 64
@@ -97,7 +96,7 @@ def test(model, test_loader):
     return test_loss / len(test_loader.dataset)
 
 
-def trainModel(trainFilePath, modelSavePath, trainlogPath, args):
+def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, args):
     x = constructTrainingData(trainFilePath, BATCH_SIZE)
     # split traindata and testdata
     train_data = x[:int(len(x)*15/16), :]
@@ -138,18 +137,23 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, args):
     plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
     plt.show()
 
-def encoding(modelPath, args):
-    dataPath = '../data/Experiment/experimentGridData/'
-    indexPath = '../results/{}/Index/'.format(args.MODEL)
+def encoding(modelPath, dataPath, args):
+    if not args.SSM_KNN:
+        indexPath = '../results/{}/Index/'.format(args.MODEL)
+    else:
+        indexPath = '../SSM_KNN/{}/Index/'.format(args.MODEL)
     if not os.path.exists(indexPath):
         os.makedirs(indexPath)
+    muPath = indexPath + 'mu/'
+    sigmaPath = indexPath + 'sigma/'
+    probPath = indexPath + 'prob/'
     for i in trange(2, 9):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
             if os.path.exists(dataPath+FILE):
-                muFILE = '../results/{}/Index/mu/mu_{}_{}.csv'.format(args.MODEL, i, j)
-                sigmaFILE = '../results/{}/Index/sigma/sigma_{}_{}.csv'.format(args.MODEL, i, j)
-                probFILE = '../results/{}/Index/prob/prob_{}_{}.csv'.format(args.MODEL, i, j)
+                muFILE = muPath + 'mu_{}_{}.csv'.format(i, j)
+                sigmaFILE = sigmaPath + 'sigma_{}_{}.csv'.format(i, j)
+                probFILE = probPath + 'prob_{}_{}.csv'.format(i, j)
                 x = constructSingleData(dataPath, FILE, BATCH_SIZE)
                 if x.shape[0] > 0:
                     predict_data = np.array(x)
@@ -183,17 +187,38 @@ def encoding(modelPath, args):
 
 
 def main(args):
-    root = '../results/{}/'.format(args.MODEL)
-    if not os.path.exists(root):
-        os.makedirs(root)
-    save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
-    trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
-    trainFilePath = '../data/Train/trainGridData/'
-    if args.TASK=="train":
-        trainModel(trainFilePath, save_model, trainlog, args)
-    else:
-        encoding(save_model, args)
+    if not args.SSM_KNN:
+        trajectory_length = 60
+        root = '../results/{}/'.format(args.MODEL)
+        if not os.path.exists(root):
+            os.makedirs(root)
+        save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
+        trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
+        trainFilePath = '../data/Train/trainGridData/'
+        if args.TASK=="train":
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
+        else:
+            dataPath = '../data/Experiment/experimentGridData/'
+            encoding(save_model, dataPath, args)
 
+    else:
+        trajectory_length = 30
+        root = '../SSM_KNN/'
+        if not os.path.exists(root):
+            os.makedirs(root)
+        root = '../SSM_KNN/{}/'.format(args.MODEL)
+        if not os.path.exists(root):
+            os.makedirs(root)
+        save_model = '../SSM_KNN/{}/{}.pt'.format(args.MODEL, args.MODEL)
+        trainlog = '../SSM_KNN/{}/trainlog.csv'.format(args.MODEL)
+        trainFilePath = '../data/Train/SSM_KNN/DataBase/GridData/'
+        dataPath_1 = '../data/Experiment/SSM_KNN/DataBase_1/GridData/'
+        dataPath_2 = '../data/Experiment/SSM_KNN/DataBase_2/GridData/'
+        if args.TASK=="train":
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
+        else:
+            encoding(save_model, dataPath_1, args)
+            encoding(save_model, dataPath_2, args)
 
 
 
@@ -203,6 +228,8 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
 
     parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE"], required=True)
+
+    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False, required=True)
 
     args = parser.parse_args()
 
