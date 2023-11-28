@@ -41,27 +41,12 @@ def herversine(lon1, lat1, lon2, lat2):
     return distance
 
 
-def grid(data, grid_num):
-    grid_data = []
-    grid_size = max(lon2 - lon1, lat2 - lat1) / grid_num
-    if grid_size == 0:
-        return None
-    for cnt in range(len(data) // 60):
-        for row in data[cnt]:
-            lon = float(row[0])
-            lat = float(row[1])
-            grid_id = min(floor((lon - lon1) / grid_size), grid_num - 1) * grid_num + min(
-                floor((lat - lat1) / grid_size), grid_num - 1)
-            grid_data.append([grid_id])
-    return grid_data
-
-def distancecalculate(data, hour):
+def distancecalculate(data, hour, traj_length):
     id_set = data.id.drop_duplicates()
     id_set = id_set.reset_index(drop = True)
     data_length = len(id_set)
-    trajectory_length = 60 #length of trajectory
     dimension = 3#[grid_num, distance, hour]
-    output_ = np.zeros((data_length, trajectory_length, dimension))
+    output_ = np.zeros((data_length, traj_length, dimension))
     for j in range(data_length):
         k = id_set[j]
         temp = data[data.id == k]
@@ -76,12 +61,12 @@ def distancecalculate(data, hour):
                 
         output_[j, :, 0] = temp.grid_id
         output_[j, :, 1] = temp.distance
-        output_[j, :, 2] = [hour] * trajectory_length
+        output_[j, :, 2] = [hour] * traj_length
     return output_
 
-def prepareGridData(filePath, file, outputFilePath):
+def prepareGridData(filePath, file, outputFilePath, traj_length):
     data, hour = loadseperatedData(filePath, file)
-    output_ = distancecalculate(data, hour)
+    output_ = distancecalculate(data, hour, traj_length)
     if not os.path.exists(outputFilePath):
         os.makedirs(outputFilePath)   
     filename = file.split('.')[0] + '.npy'
@@ -93,20 +78,45 @@ def main(args):
     header2 = '../data/Experiment/'
     if args.model == 'train':
         header = header1
+        if args.SSN:
+            header = header + 'SSM_KNN/Database/'
+            filePath = header + 'data_before_time/'
+            outputFilePath = header + 'GridData/'
+        else:
+            filePath = header + '{}_data_before_time/'.format(args.model)
+            outputFilePath = header + '{}GridData/'.format(args.model)
+        filelist = findfile(filePath)
+        print("Start preparing grid data...")
+        for i in trange(0, len(filelist)):
+            prepareGridData(filePath, filelist[i], outputFilePath, args.trajLen)
+        print("Finish preparing grid data.")
     else:
         header = header2
-    filePath = header + '{}_data_before_time/'.format(args.model)
-    outputFilePath = header + '{}GridData/'.format(args.model)
-    filelist = findfile(filePath)
-    print("Start preparing grid data...")
-    for i in trange(0, len(filelist)):
-        prepareGridData(filePath, filelist[i], outputFilePath)
-    print("Finish preparing grid data.")
+        if args.SSN:
+            for i in range(1,2):
+                header_ = header + 'SSM_KNN/Database_{}/'.format(i+1)
+                filePath = header_ + 'data_before_time/'
+                outputFilePath = header_ + 'GridData/'
+                filelist = findfile(filePath)
+                print("Start preparing grid data...")
+                for i in trange(0, len(filelist)):
+                    prepareGridData(filePath, filelist[i], outputFilePath, args.trajLen)
+                print("Finish preparing grid data.")
+        else:
+            filePath = header + '{}_data_before_time/'.format(args.model)
+            outputFilePath = header + '{}GridData/'.format(args.model)
+            filelist = findfile(filePath)
+            print("Start preparing grid data...")
+            for i in trange(0, len(filelist)):
+                prepareGridData(filePath, filelist[i], outputFilePath, args.trajLen)
+            print("Finish preparing grid data.")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', type=str, default='train', choices=["train","experiment"], required=True)
+    parser.add_argument('-s', '--SSN', type=bool, default=False, required=True)
+    parser.add_argument('-l', '--trajLen', type=int, default=30, choices=[30,60], required=True)
     args = parser.parse_args()
     main(args)
     
