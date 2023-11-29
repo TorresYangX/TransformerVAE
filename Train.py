@@ -140,10 +140,16 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
 def encoding(modelPath, dataPath, args):
     if not args.SSM_KNN:
         indexPath = '../results/{}/Index/'.format(args.MODEL)
+        if not os.path.exists(indexPath):
+            os.makedirs(indexPath)
     else:
         indexPath = '../SSM_KNN/{}/Index/'.format(args.MODEL)
-    if not os.path.exists(indexPath):
-        os.makedirs(indexPath)
+        if not os.path.exists(indexPath):
+            os.makedirs(indexPath)
+        dbNUM = dataPath.split('/')[-3]
+        indexPath = indexPath + dbNUM + '/'
+        if not os.path.exists(indexPath):
+            os.makedirs(indexPath)
     muPath = indexPath + 'mu/'
     sigmaPath = indexPath + 'sigma/'
     probPath = indexPath + 'prob/'
