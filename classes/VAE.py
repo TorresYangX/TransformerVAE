@@ -53,12 +53,13 @@ class VAE(nn.Module):
         return x_hat
 
     def loss_fn(self, x_hat, x, mu, logvar):
+        KL_WEIGHT = 0.01
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
         targets = torch.flatten(x)
         logits = torch.flatten(x_hat, start_dim=0, end_dim=1)
         BCE = criterion(logits.float(), targets.long()).mean()
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + 0. * KLD
+        return BCE + KL_WEIGHT * KLD
 
     def forward(self, x):
         mu, logvar = self.encode(x)
