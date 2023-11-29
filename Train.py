@@ -134,7 +134,10 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
     plt.ylabel("loss",fontsize=15)
     plt.legend()
     plt.grid()
-    plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
+    if not args.SSM_KNN:
+        plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
+    else:
+        plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
     plt.show()
 
 def encoding(modelPath, dataPath, args):
