@@ -8,6 +8,7 @@ from nvib.nvib_layer import Nvib
 import numpy as np
 import pandas as pd
 import math
+import matplotlib.pyplot as plt
 import logging
 import os
 from tqdm import trange
@@ -350,7 +351,7 @@ def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, e
     return test_losses_value / len(test_loader.dataset)
 
 
-def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length):
+def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, isSSM):
     x = constructTrainingData(trainFilePath, Batch_size)
     # split traindata and testdata
     train_data = x[:int(len(x)*15/16), :]
@@ -382,6 +383,19 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length):
         test_loss_list.append(test_loss)
     print("End training...")
     torch.save(model, modelSavePath)
+    x=[i for i in range(len(train_loss_list))]
+    figure = plt.figure(figsize=(20, 8), dpi=80)
+    plt.plot(x,train_loss_list,label='train_losses')
+    plt.plot(x,test_loss_list,label='test_losses')
+    plt.xlabel("iterations",fontsize=15)
+    plt.ylabel("loss",fontsize=15)
+    plt.legend()
+    plt.grid()
+    if not isSSM:
+        plt.savefig('../results/VAE_nvib/loss_figure.png')
+    else:
+        plt.savefig('../SSM_KNN/VAE_nvib/loss_figure.png')
+    plt.show()
 
 
 def encoding(modelPath, dataPath, trajectory_length, isSSM):
@@ -474,9 +488,9 @@ def main(args):
         trainFilePath = '../data/Train/trainGridData/'
         dataPath = '../data/Experiment/experimentGridData/'
         if args.model=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length)
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args.SSM_KNN)
         else:
-            encoding(save_model, dataPath, args.trajLen, trajectory_length)
+            encoding(save_model, dataPath, args.trajLen, trajectory_length, args.SSM_KNN)
     else:
         trajectory_length = 30
         root = '../SSM_KNN/'
@@ -491,7 +505,7 @@ def main(args):
         dataPath_1 = '../data/Experiment/SSM_KNN/DataBase_1/GridData/'
         dataPath_2 = '../data/Experiment/SSM_KNN/DataBase_2/GridData/'
         if args.model=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length)
+            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args.SSM_KNN)
         else:
             encoding(save_model, dataPath_1, trajectory_length, args.SSM_KNN)
             encoding(save_model, dataPath_2, trajectory_length, args.SSM_KNN)
