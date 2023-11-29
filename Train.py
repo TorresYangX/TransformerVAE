@@ -18,7 +18,7 @@ BATCH_SIZE = 16
 grid_num = 50
 vocab_size = grid_num * grid_num
 dropout = 0.1
-learning_rate = 0.001
+learning_rate = 1e-5
 embedding_dim = 64
 hidden_dim = 32
 latent_dim = 16
@@ -112,7 +112,7 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
         "VAE": VAE,
         "AE": AE,
     }[args.MODEL](embedding_dim, hidden_dim, latent_dim, vocab_size, BATCH_SIZE, trajectory_length).to(device)
-    optimizer = optim.RMSprop(model.parameters(),lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(),lr=learning_rate)
     
     logger = get_logger(trainlogPath)
     train_loss_list = []
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE"], required=True)
 
-    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False, required=True)
+    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False)
 
     args = parser.parse_args()
 
