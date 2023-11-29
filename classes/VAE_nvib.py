@@ -27,8 +27,8 @@ PRIOR_VAR = 1
 PRIOR_ALPHA = 1
 KAPPA = 1
 DELTA = 1
-KL_GAUSSIAN_LAMBDA = 0
-KL_DIRICHLET_LAMBDA = 0
+KL_GAUSSIAN_LAMBDA = 0.001
+KL_DIRICHLET_LAMBDA = 1
 KL_ANNEALING_GAUSSIAN = "constant"
 KL_ANNEALING_DIRICHLET = "constant"
 
@@ -369,7 +369,7 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, is
     mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
     src_key_padding_mask = mask1.to(device)
     tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
-    optimizer = optim.RMSprop(model.parameters(),lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(),lr=learning_rate)
 
     logger = get_logger(trainlogPath)
     train_loss_list = []
@@ -490,7 +490,7 @@ def main(args):
         if args.model=="train":
             trainModel(trainFilePath, save_model, trainlog, trajectory_length, args.SSM_KNN)
         else:
-            encoding(save_model, dataPath, args.trajLen, trajectory_length, args.SSM_KNN)
+            encoding(save_model, dataPath, trajectory_length, args.SSM_KNN)
     else:
         trajectory_length = 30
         root = '../SSM_KNN/'
@@ -517,7 +517,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-m", "--model", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
 
-    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False, required=True)
+    parser.add_argument("-s", "--SSM_KNN", type=bool, default=True)
 
     args = parser.parse_args()
 
