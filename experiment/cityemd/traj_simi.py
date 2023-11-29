@@ -32,7 +32,7 @@ def loadHistoricalData(dataPath, BATCH_SIZE, targetData, history):
                     temp = loadData(dataPath + file, BATCH_SIZE)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
         for i in range(int(day), int(day)+1):
-            for j in range(int(hour)):
+            for j in range(int(hour)+1): ## weahter historical data is include the target data ??? 
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
                     temp = loadData(dataPath + file, BATCH_SIZE)
