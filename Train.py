@@ -12,17 +12,22 @@ import matplotlib.pyplot as plt
 
 from classes.VAE import VAE
 from classes.AE import AE
+from classes.transformer import Transformer
 
 
 BATCH_SIZE = 16
 grid_num = 50
-vocab_size = grid_num * grid_num
+vocab_size = grid_num * grid_num + 1
 dropout = 0.1
-learning_rate = 1e-5
+learning_rate = 1e-3
 embedding_dim = 64
 hidden_dim = 32
 latent_dim = 16
 MAX_EPOCH = 300
+
+NUM_HEADS = 8
+NUM_LAYERS = 6
+DIM_FORWARD = 512
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -72,46 +77,68 @@ def get_logger(filename, verbosity=1, name=None):
     return logger
 
 
-def train(model, train_loader, optimizer):
+def train(model, train_loader, optimizer, args):
     model.train()
     train_loss = 0
     for _, x in enumerate(train_loader):
         x = x[0].to(device)
+        if args.MODEL == 'VAE' or args.MODEL == "AE":
+            input_dict = {
+                "x": x,
+            }
+        else:
+            input_dict = {
+                "src": x,
+                "tgt": x,
+            }
         optimizer.zero_grad()
-        dict = model(x)
-        loss = model.loss_fn(x=x, **dict)
+        dict = model(**input_dict)
+        loss = model.loss_fn(targets=x, **dict)["Loss"]
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
     return train_loss / len(train_loader.dataset)
 
-def test(model, test_loader):
+def test(model, test_loader, args):
     model.eval()
     test_loss = 0
     with torch.no_grad():
         for _, x in enumerate(test_loader):
             x = x[0].to(device)
-            dict = model(x)
-            test_loss += model.loss_fn(x=x, **dict).item()
+            if args.MODEL == 'VAE' or args.MODEL == "AE":
+                input_dict = {
+                    "x": x,
+                }
+            else:
+                input_dict = {
+                    "src": x,
+                    "tgt": x,
+                }
+            dict = model(**input_dict)
+            test_loss += model.loss_fn(targets=x, **dict)["Loss"].item()
     return test_loss / len(test_loader.dataset)
 
 
 def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, args):
     x = constructTrainingData(trainFilePath, BATCH_SIZE)
     # split traindata and testdata
-    train_data = x[:int(len(x)*15/16), :]
-    test_data = x[int(len(x)*15/16):, :]
+    train_data = x[:int(len(x)*(BATCH_SIZE-1)/BATCH_SIZE), :]
+    test_data = x[int(len(x)*(BATCH_SIZE-1)/BATCH_SIZE):, :]
 
     train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_data))
     test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_data))
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
-
-    model = {
-        "VAE": VAE,
-        "AE": AE,
-    }[args.MODEL](embedding_dim, hidden_dim, latent_dim, vocab_size, BATCH_SIZE, trajectory_length).to(device)
+    if args.MODEL == 'VAE' or args.MODEL == "AE":
+        model = {
+            "VAE": VAE,
+            "AE": AE,
+        }[args.MODEL](embedding_dim, hidden_dim, latent_dim, vocab_size, BATCH_SIZE, trajectory_length).to(device)
+    elif args.MODEL == 'Transformer':
+        model = {
+            "Transformer": Transformer,
+        }[args.MODEL](latent_dim, NUM_HEADS, NUM_LAYERS, DIM_FORWARD, dropout, vocab_size).to(device)
     optimizer = optim.Adam(model.parameters(),lr=learning_rate)
     
     logger = get_logger(trainlogPath)
@@ -119,8 +146,8 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
     test_loss_list = []
     print("Start training...")
     for epoch in trange(MAX_EPOCH):
-        train_loss = train(model, train_loader, optimizer)
-        test_loss = test(model, test_loader)
+        train_loss = train(model, train_loader, optimizer, args)
+        test_loss = test(model, test_loader, args)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
@@ -189,7 +216,7 @@ def encoding(modelPath, dataPath, args):
                         for idx, src in enumerate(predict_loader):
                             src = src[0].to(device)
                             dict = model(src)
-                            prob = dict['h'][:, 0, :]
+                            prob = dict['prob'][:, 0, :]
                             result_prob.append(prob.cpu().detach().numpy())
                         result_prob = np.concatenate(result_prob, axis = 0)
                         parameteroutput(result_prob, probFILE)
@@ -236,7 +263,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
 
-    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "Transformer"], required=True)
 
     parser.add_argument("-s", "--SSM_KNN", type=bool, default=False)
 
