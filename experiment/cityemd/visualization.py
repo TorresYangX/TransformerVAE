@@ -39,8 +39,8 @@ def visualEmdResult():
     plt.plot(x, y23, 'm-', linewidth=1.5, label='VAE_nvib')
     plt.plot(x, y25, 'g-.', linewidth=1.5, label='LCSS')
     plt.plot(x, y26, 'y-', linewidth=1.5, label='EDR')
-    plt.plot(x, y27, 'c-', linewidth=1.5, label='EDwP')
-    plt.plot(x, y28, 'k-', linewidth=1.5, label='DTW')
+    # plt.plot(x, y27, 'c-', linewidth=1.5, label='EDwP')
+    # plt.plot(x, y28, 'k-', linewidth=1.5, label='DTW')
     
 
     # Set the x-axis label
