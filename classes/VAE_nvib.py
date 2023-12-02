@@ -16,7 +16,6 @@ import argparse
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-# device = torch.device("cpu")
 
 grid_num = 50
 vocab_size = grid_num * grid_num +1 #V

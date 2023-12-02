@@ -44,17 +44,20 @@ class AE(nn.Module):
         x_hat = self.softmax(x_hat)
         return x_hat
     
-    def loss_fn(self, x_hat, h,x):
+    def loss_fn(self, logits, targets, prob):
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
-        targets = torch.flatten(x)
-        logits = torch.flatten(x_hat, start_dim=0, end_dim=1)
+        targets = torch.flatten(targets)
+        logits = torch.flatten(logits, start_dim=0, end_dim=1)
         BCE = criterion(logits.float(), targets.long()).mean()
-        return BCE
+        return {
+            "Loss": BCE,
+            "CrossEntropy": BCE,
+        }
 
     def forward(self, x):
         h = self.encode(x)
         x_hat = self.decode(h)
         return {
-            'x_hat': x_hat,
-            'h': h
+            'logits': x_hat,
+            'prob': h
         }

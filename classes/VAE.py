@@ -52,21 +52,25 @@ class VAE(nn.Module):
         x_hat = self.softmax(x_hat)
         return x_hat
 
-    def loss_fn(self, x_hat, x, mu, logvar):
+    def loss_fn(self, logits, targets, mu, logvar):
         KL_WEIGHT = 0.01
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
-        targets = torch.flatten(x)
-        logits = torch.flatten(x_hat, start_dim=0, end_dim=1)
+        targets = torch.flatten(targets)
+        logits = torch.flatten(logits, start_dim=0, end_dim=1)
         BCE = criterion(logits.float(), targets.long()).mean()
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + KL_WEIGHT * KLD
+        return {
+            "Loss: ": BCE + KL_WEIGHT * KLD,
+            "BCE: ": BCE,
+            "KLD: ": KLD,
+        }
 
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         x_hat = self.decode(z)
         return {
-            "x_hat": x_hat,
+            "logits": x_hat,
             "mu": mu,
             "logvar": logvar,
         }
