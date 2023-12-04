@@ -53,6 +53,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--MODEL', type=str, default='VAE', help='model name', choices=["AE", "VAE", "VAE_nvib", "LCSS", "EDR", "EDwP", "DTW"], required=True)
+    parser.add_argument('-m', '--MODEL', type=str, default='VAE', help='model name', choices=["AE", "VAE", "VAE_nvib", 
+                                                                                              "Transformer", "LCSS", "EDR", 
+                                                                                              "EDwP", "DTW"], required=True)
     args = parser.parse_args()
     main(args)

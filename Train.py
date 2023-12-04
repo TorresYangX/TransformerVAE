@@ -17,7 +17,7 @@ from classes.transformer import Transformer
 
 BATCH_SIZE = 16
 grid_num = 50
-vocab_size = grid_num * grid_num + 1
+vocab_size = grid_num * grid_num + 2
 dropout = 0.1
 learning_rate = 1e-3
 embedding_dim = 64
@@ -76,60 +76,95 @@ def get_logger(filename, verbosity=1, name=None):
     logger.addHandler(sh)
     return logger
 
+def plot_loss(train_loss_list, test_loss_list, args):
+    x=[i for i in range(len(train_loss_list))]
+    figure = plt.figure(figsize=(20, 8), dpi=80)
+    plt.plot(x,train_loss_list,label='train_losses')
+    plt.plot(x,test_loss_list,label='test_losses')
+    plt.xlabel("iterations",fontsize=15)
+    plt.ylabel("loss",fontsize=15)
+    plt.legend()
+    plt.grid()
+    if not args.SSM_KNN:
+        plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
+    else:
+        plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
+    plt.show()
 
-def train(model, train_loader, optimizer, args):
+
+def train(model, train_loader, optimizer, trajectory_length, jargs):
     model.train()
     train_loss = 0
     for _, x in enumerate(train_loader):
-        x = x[0].to(device)
         if args.MODEL == 'VAE' or args.MODEL == "AE":
+            x = x[0].to(device)
             input_dict = {
                 "x": x,
             }
+            tgt = x
         else:
+            x = x[0].transpose(0,1).to(device)
+            eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+            sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+            src = torch.cat([x, eos], dim=0)
+            tgt = torch.cat([sos, x], dim=0)
+
+            src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+            tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
             input_dict = {
-                "src": x,
-                "tgt": x,
+                "src": src,
+                "tgt": tgt,
+                "src_key_padding_mask": src_key_padding_mask,
+                "tgt_key_padding_mask": tgt_key_padding_mask,
             }
+
         optimizer.zero_grad()
         dict = model(**input_dict)
-        loss = model.loss_fn(targets=x, **dict)["Loss"]
+        loss = model.loss_fn(targets=tgt, **dict)["Loss"]
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
     return train_loss / len(train_loader.dataset)
 
-def test(model, test_loader, args):
+def test(model, test_loader, trajectory_length, args):
     model.eval()
     test_loss = 0
     with torch.no_grad():
         for _, x in enumerate(test_loader):
-            x = x[0].to(device)
             if args.MODEL == 'VAE' or args.MODEL == "AE":
+                x = x[0].to(device)
                 input_dict = {
                     "x": x,
                 }
+                tgt = x
             else:
+                x = x[0].transpose(0,1).to(device)
+                eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+                sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+                src = torch.cat([x, eos], dim=0)
+                tgt = torch.cat([sos, x], dim=0)
+
+                src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+                tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
                 input_dict = {
-                    "src": x,
-                    "tgt": x,
+                    "src": src,
+                    "tgt": tgt,
+                    "src_key_padding_mask": src_key_padding_mask,
+                    "tgt_key_padding_mask": tgt_key_padding_mask,
                 }
+
             dict = model(**input_dict)
-            test_loss += model.loss_fn(targets=x, **dict)["Loss"].item()
+            test_loss += model.loss_fn(targets=tgt, **dict)["Loss"].item()
     return test_loss / len(test_loader.dataset)
 
 
 def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, args):
     x = constructTrainingData(trainFilePath, BATCH_SIZE)
-    # split traindata and testdata
-    train_data = x[:int(len(x)*(BATCH_SIZE-1)/BATCH_SIZE), :]
-    test_data = x[int(len(x)*(BATCH_SIZE-1)/BATCH_SIZE):, :]
+    dataSet = torch.utils.data.TensorDataset(torch.from_numpy(x))
+    val_size = int(0.2 * len(dataSet))
 
-    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_data))
-    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_data))
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
     if args.MODEL == 'VAE' or args.MODEL == "AE":
         model = {
             "VAE": VAE,
@@ -146,28 +181,20 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
     test_loss_list = []
     print("Start training...")
     for epoch in trange(MAX_EPOCH):
-        train_loss = train(model, train_loader, optimizer, args)
-        test_loss = test(model, test_loader, args)
+        train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [len(dataSet) - val_size, val_size])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
+        train_loss = train(model, train_loader, optimizer, trajectory_length, args)
+        test_loss = test(model, test_loader, trajectory_length, args)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
     torch.save(model, modelSavePath)
-    x=[i for i in range(len(train_loss_list))]
-    figure = plt.figure(figsize=(20, 8), dpi=80)
-    plt.plot(x,train_loss_list,label='train_losses')
-    plt.plot(x,test_loss_list,label='test_losses')
-    plt.xlabel("iterations",fontsize=15)
-    plt.ylabel("loss",fontsize=15)
-    plt.legend()
-    plt.grid()
-    if not args.SSM_KNN:
-        plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
-    else:
-        plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
-    plt.show()
+    plot_loss(train_loss_list, test_loss_list, args)
 
-def encoding(modelPath, dataPath, args):
+
+def encoding(modelPath, dataPath, trajectory_length, args):
     if not args.SSM_KNN:
         indexPath = '../results/{}/Index/'.format(args.MODEL)
         if not os.path.exists(indexPath):
@@ -220,6 +247,32 @@ def encoding(modelPath, dataPath, args):
                             result_prob.append(prob.cpu().detach().numpy())
                         result_prob = np.concatenate(result_prob, axis = 0)
                         parameteroutput(result_prob, probFILE)
+                    elif args.MODEL == "Transformer":
+                        result_prob = []
+                        for _, x in enumerate(predict_loader):
+                            x = x[0].transpose(0,1).to(device)
+                            eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+                            sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+                            src = torch.cat([x, eos], dim=0)
+                            tgt = torch.cat([sos, x], dim=0)
+
+                            src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+                            tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
+                            input_dict = {
+                                "src": src,
+                                "tgt": tgt,
+                                "src_key_padding_mask": src_key_padding_mask,
+                                "tgt_key_padding_mask": tgt_key_padding_mask,
+                            }
+
+                            dict = model(**input_dict)
+                            encoder_ouput = dict['z']
+                            prob = encoder_ouput.mean(dim=0, keepdim=True) #(1,16,16)
+                            result_prob.append(prob.cpu().detach().numpy())
+                        result_prob = np.concatenate(result_prob, axis = 1)
+                        result_prob =  result_prob.transpose(1,0,2).reshape(result_prob.shape[1], -1)
+                        parameteroutput(result_prob, probFILE)
 
 
 def main(args):
@@ -235,7 +288,7 @@ def main(args):
             trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
         else:
             dataPath = '../data/Experiment/experimentGridData/'
-            encoding(save_model, dataPath, args)
+            encoding(save_model, dataPath, trajectory_length, args)
 
     else:
         trajectory_length = 30
@@ -253,8 +306,8 @@ def main(args):
         if args.TASK=="train":
             trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
         else:
-            encoding(save_model, dataPath_1, args)
-            encoding(save_model, dataPath_2, args)
+            encoding(save_model, dataPath_1, trajectory_length, args)
+            encoding(save_model, dataPath_2, trajectory_length, args)
 
 
 

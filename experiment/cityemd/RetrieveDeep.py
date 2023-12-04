@@ -167,8 +167,10 @@ def main(args):
             'Sigma': '../results/VAE_nvib/Index/sigma/',
             'Pi': '../results/VAE_nvib/Index/pi/',
             'Alpha': '../results/VAE_nvib/Index/alpha/'
+        },
+        "Transformer": {
+            'Prob':'../results/Transformer/Index/prob/'
         }
-
     }
     
     groundTruthPath = '../data/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
@@ -194,7 +196,7 @@ def main(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model', type=str, default="AE", help='MODEL', choices=["AE", "VAE", "VAE_nvib"], required=True)
+    parser.add_argument('-m','--model', type=str, default="AE", help='MODEL', choices=["AE", "VAE", "VAE_nvib", "Transformer"], required=True)
     parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
     parser.add_argument('-hour','--hour', type=int, default=0, help='hour', required=True)
     args = parser.parse_args()

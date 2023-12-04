@@ -15,10 +15,12 @@ from tqdm import trange
 import argparse
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 grid_num = 50
-vocab_size = grid_num * grid_num +1 #V
+vocab_size = grid_num * grid_num +2 #V
 Batch_size = 16 #B
 embedding_dim = 16 # H
 PRIOR_MU = 0
@@ -40,7 +42,7 @@ ACCUMULATION_STEPS = 1
 def constructTrainingData(filePath, BATCH_SIZE):
     x = []
     for file in os.listdir(filePath):
-        data = np.load(filePath + file, allow_pickle=True)
+        data = np.load(filePath + file)
         x.extend(data)
     x = np.array(x)
     resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
@@ -79,6 +81,21 @@ def get_logger(filename, verbosity=1, name=None):
     sh.setFormatter(formatter)
     logger.addHandler(sh)
     return logger
+
+def plot_loss(train_loss_list, test_loss_list, args):
+    x=[i for i in range(len(train_loss_list))]
+    figure = plt.figure(figsize=(20, 8), dpi=80)
+    plt.plot(x,train_loss_list,label='train_losses')
+    plt.plot(x,test_loss_list,label='test_losses')
+    plt.xlabel("iterations",fontsize=15)
+    plt.ylabel("loss",fontsize=15)
+    plt.legend()
+    plt.grid()
+    if not args.SSM_KNN:
+        plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
+    else:
+        plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
+    plt.show()
 
 
 
@@ -307,12 +324,18 @@ class TransformerNvib(nn.Module):
             **latent_output_dict,
         }
 
-def training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask,OPTIMIZER, epoch):
+def training(model, train_loader, OPTIMIZER, trajectory_length, epoch):
     train_losses_value = 0
-    for idx, src in enumerate(train_loader):
-        src = src[0].transpose(0,1).to(device)
-        end = torch.full((1, Batch_size), 2500).to(device)
-        tgt = torch.cat((src, end), dim=0) #(61,64)
+    for idx, x in enumerate(train_loader):
+        x = x[0].transpose(0,1).to(device)
+        eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+        sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+        src = torch.cat([x, eos], dim=0)
+        tgt = torch.cat([sos, x], dim=0)
+
+        src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+        tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
         train_outputs_dict = model(
             src,
             tgt,
@@ -329,22 +352,25 @@ def training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask,OPT
         train_losses_value += train_losses["Loss"].item()
     return train_losses_value / len(train_loader.dataset)
 
-def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, epoch):
+def evaluation(model, test_loader, trajectory_length, epoch):
     test_losses_value = 0
-    for idx, src in enumerate(test_loader):
+    for idx, x in enumerate(test_loader):
         with torch.no_grad():
-            src = src[0].transpose(0,1).to(device)
-            end = torch.full((1, Batch_size), 2500).to(device)
-            tgt = torch.cat((src, end), dim=0)
-            # Forward pass
+            x = x[0].transpose(0,1).to(device)
+            eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+            sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+            src = torch.cat([x, eos], dim=0)
+            tgt = torch.cat([sos, x], dim=0)
+
+            src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+            tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
             test_outputs_dict = model(
                 src,
                 tgt,
                 src_key_padding_mask=src_key_padding_mask,
                 tgt_key_padding_mask=tgt_key_padding_mask,
             )  # [sq_len, bs, Vocab]
-
-            # Get loss
             test_losses = model.loss(**test_outputs_dict, targets=tgt, epoch=epoch)
             test_losses_value += test_losses["Loss"].item()
     return test_losses_value / len(test_loader.dataset)
@@ -352,22 +378,11 @@ def evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, e
 
 def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, isSSM):
     x = constructTrainingData(trainFilePath, Batch_size)
-    # split traindata and testdata
-    train_data = x[:int(len(x)*15/16), :]
-    test_data = x[int(len(x)*15/16):, :]
-
-    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(train_data))
-    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(test_data))
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=Batch_size)
+    dataSet = torch.utils.data.TensorDataset(torch.from_numpy(x))
+    val_size = int(0.2 * len(dataSet))
 
     model = TransformerNvib().to(device)
 
-    mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
-    mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
-    src_key_padding_mask = mask1.to(device)
-    tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
     optimizer = optim.Adam(model.parameters(),lr=learning_rate)
 
     logger = get_logger(trainlogPath)
@@ -375,33 +390,21 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, is
     test_loss_list = []
     print("Start training...")
     for epoch in trange(MAX_EPOCH):
-        train_loss = training(model, train_loader, src_key_padding_mask, tgt_key_padding_mask, optimizer, epoch)
-        test_loss = evaluation(model, test_loader, src_key_padding_mask, tgt_key_padding_mask, epoch)
+        train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [len(dataSet) - val_size, val_size])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=Batch_size)
+        
+        train_loss = training(model, train_loader, optimizer, trajectory_length, epoch)
+        test_loss = evaluation(model, test_loader, trajectory_length, epoch)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
     torch.save(model, modelSavePath)
-    x=[i for i in range(len(train_loss_list))]
-    figure = plt.figure(figsize=(20, 8), dpi=80)
-    plt.plot(x,train_loss_list,label='train_losses')
-    plt.plot(x,test_loss_list,label='test_losses')
-    plt.xlabel("iterations",fontsize=15)
-    plt.ylabel("loss",fontsize=15)
-    plt.legend()
-    plt.grid()
-    if not isSSM:
-        plt.savefig('../results/VAE_nvib/loss_figure.png')
-    else:
-        plt.savefig('../SSM_KNN/VAE_nvib/loss_figure.png')
-    plt.show()
+    plot_loss(train_loss_list, test_loss_list, isSSM)
 
 
 def encoding(modelPath, dataPath, trajectory_length, isSSM):
-    mask1 = torch.zeros((Batch_size, trajectory_length), dtype=torch.bool)
-    mask2 = torch.ones((Batch_size, 1), dtype=torch.bool)
-    src_key_padding_mask = mask1.to(device)
-    tgt_key_padding_mask = torch.cat((mask1, mask2), dim=1).to(device)
     if not isSSM:
         muFolder = '../results/VAE_nvib/Index/mu/'
         sigmaFolder = '../results/VAE_nvib/Index/sigma/'
@@ -440,10 +443,16 @@ def encoding(modelPath, dataPath, trajectory_length, isSSM):
                     result_sigma = []
                     result_pi = []
                     result_alpha = []
-                    for idx, src in enumerate(predict_loader):
-                        src = src[0].transpose(0,1).to(device)
-                        end = torch.full((1, Batch_size), 2500).to(device)
-                        tgt = torch.cat((src, end), dim=0)
+                    for idx, x in enumerate(predict_loader):
+                        x = x[0].transpose(0,1).to(device)
+                        eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
+                        sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+                        src = torch.cat([x, eos], dim=0)
+                        tgt = torch.cat([sos, x], dim=0)    
+
+                        src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+                        tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+
                         # Forward pass
                         outputs_dict = model(
                             src,
@@ -516,7 +525,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-m", "--model", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
 
-    parser.add_argument("-s", "--SSM_KNN", type=bool, default=True)
+    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False)
 
     args = parser.parse_args()
 
