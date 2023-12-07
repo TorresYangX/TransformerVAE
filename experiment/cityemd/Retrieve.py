@@ -7,13 +7,15 @@ from tqdm import trange
 from pyemd import emd
 import argparse
 
+trajectory_length = 60
+
 def MSE(targetProb_, historicalProb_):
     return np.sqrt(np.square(targetProb_ - historicalProb_)).sum()
 
 def loadDataOnly(data, BATCH_SIZE):
     trajectories = pd.read_csv(data, header = None)
     trajectories.columns = ['time', 'longitude', 'latitude', 'id']
-    resid = int(((len(trajectories) / 60) // BATCH_SIZE) * BATCH_SIZE * 60)
+    resid = int(((len(trajectories) / trajectory_length) // BATCH_SIZE) * BATCH_SIZE * trajectory_length)
     trajectories = trajectories[:resid]
     return trajectories
 
@@ -51,7 +53,8 @@ def loadScore(path, history):
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
     with open(retrievedTrajectories, mode = 'w') as f:
         for i in range(len(solution)):
-            historicalTrajectories[solution[i]*60:(solution[i]+1)*60].to_csv(f, header = None, index = False)
+            historicalTrajectories[solution[i]*trajectory_length:(solution[i]+1)*trajectory_length
+                                   ].to_csv(f, header = None, index = False)
     return 0
 
 def retrieval(scoreFile, historicalScore, targetNum, retrievedTrajectories, historicalTrajectories):

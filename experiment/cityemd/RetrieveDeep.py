@@ -14,7 +14,7 @@ trajectory_length = 60
 def loadData(data, BATCH_SIZE, day, hour,  **kwargs):
     trajectories = pd.read_csv(data+"{}_{}.csv".format(day,hour), header = None)
     trajectories.columns = ['time', 'longitude', 'latitude', 'id']
-    resid = int(((len(trajectories) / 60) // BATCH_SIZE) * BATCH_SIZE * 60)
+    resid = int(((len(trajectories) / trajectory_length) // BATCH_SIZE) * BATCH_SIZE * trajectory_length)
     trajectories = trajectories[:resid]
     output = {}
     for key in kwargs.keys():
@@ -127,7 +127,8 @@ def loadHistoricalData(dataPath, BATCH_SIZE, day, hour, history, **kwargs):
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
     with open(retrievedTrajectories, mode = 'w') as f:
         for i in trange(len(solution)):
-            historicalTrajectories[solution[i]*60:(solution[i]+1)*60].to_csv(f, header = None, index = False)
+            historicalTrajectories[solution[i]*trajectory_length:(solution[i]+1)*trajectory_length
+                                   ].to_csv(f, header = None, index = False)
     return 0
 
 def retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories, paraNum):
