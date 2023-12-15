@@ -69,8 +69,7 @@ def lineChart():
      
 
 if __name__ == '__main__':
-    # lineChart()
-    barChart()
+    lineChart()
 
 
 
