@@ -57,19 +57,33 @@ def matricbarChart():
     EDwP_SP = float(EDwP_data[4][0].split(':')[1])
     DTW_SP = float(DTW_data[4][0].split(':')[1])
     
-    # draw all the values in the same figure exculding the MD
-    x = np.arange(8)
-    width = 0.2
+    # draw all the values in the same figure,
+    x = np.arange(4)
+    width = 0.1
     fig, ax = plt.subplots()
-    ax.bar(x - width/2, [AE_NMD, VAE_NMD, VAE_nvib_NMD, Transformer_NMD, LCSS_NMD, EDR_NMD, EDwP_NMD, DTW_NMD], width, label='NMD')
-    ax.bar(x + width/2, [AE_NMA, VAE_NMA, VAE_nvib_NMA, Transformer_NMA, LCSS_NMA, EDR_NMA, EDwP_NMA, DTW_NMA], width, label='NMA')
-    ax.bar(x + width*3/2, [AE_RRNSA, VAE_RRNSA, VAE_nvib_RRNSA, Transformer_RRNSA, LCSS_RRNSA, EDR_RRNSA, EDwP_RRNSA, DTW_RRNSA], width, label='RRNSA')
-    ax.bar(x + width*5/2, [AE_SP, VAE_SP, VAE_nvib_SP, Transformer_SP, LCSS_SP, EDR_SP, EDwP_SP, DTW_SP], width, label='SP')
-    ax.set_ylabel('Value')
-    ax.set_title('Metric')
+    labels = ['NMD', 'NMA', 'RRNSA', 'SP']
+    ## VAE_nvib
+    ax.bar(x - 2*width, [VAE_nvib_NMD, VAE_nvib_NMA, VAE_nvib_RRNSA, VAE_nvib_SP], width, label='NVAE')
+    ## AE
+    ax.bar(x - width, [AE_NMD, AE_NMA, AE_RRNSA, AE_SP], width, label='AE')
+    ## DTW
+    ax.bar(x, [DTW_NMD, DTW_NMA, DTW_RRNSA, DTW_SP], width, label='DTW')
+    ## EDwP
+    ax.bar(x + width, [EDwP_NMD, EDwP_NMA, EDwP_RRNSA, EDwP_SP], width, label='EDwP')
+    ## VAE
+    ax.bar(x + 2*width, [VAE_NMD, VAE_NMA, VAE_RRNSA, VAE_SP], width, label='VAE')
+    ## Transformer
+    ax.bar(x + 3*width, [Transformer_NMD, Transformer_NMA, Transformer_RRNSA, Transformer_SP], width, label='Transformer')
+    ## EDR
+    ax.bar(x + 4*width, [EDR_NMD, EDR_NMA, EDR_RRNSA, EDR_SP], width, label='EDR')
+    ## LCSS
+    ax.bar(x + 5*width, [LCSS_NMD, LCSS_NMA, LCSS_RRNSA, LCSS_SP], width, label='LCSS')
+    
+    ax.set_ylabel('Value', fontweight='bold', fontsize=12)
+    ax.set_title('Mobility Tableau', fontweight='bold', fontsize=12)
     ax.set_xticks(x)
-    ax.set_xticklabels(['AE', 'VAE', 'VAE_nvib', 'Transformer', 'LCSS', 'EDR', 'EDwP', 'DTW'])
-    ax.legend()
+    ax.set_xticklabels(labels, fontweight='bold', fontsize=12)
+    ax.legend(prop={'size': 12, 'weight': 'bold'})
     plt.savefig('../results/Metric.png')
     plt.show()
     
@@ -96,5 +110,5 @@ def mdBarChart():
     plt.show()  
 
 if __name__ == '__main__':
-    # matricbarChart()
-    mdBarChart()
+    matricbarChart()
+    # mdBarChart()
