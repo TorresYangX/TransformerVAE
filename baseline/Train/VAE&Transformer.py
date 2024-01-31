@@ -1,7 +1,4 @@
 import numpy as np
-import pandas as pd
-import math
-import logging
 import os
 from tqdm import trange
 import argparse
@@ -13,8 +10,8 @@ import matplotlib.pyplot as plt
 from baseFuncs import *
 
 from baseline.models.VAE import VAE
-from baseline.models.VAE import AE
-from baseline.models.VAE import Transformer
+from baseline.models.AE import AE
+from baseline.models.transformer import Transformer
 
 
 BATCH_SIZE = 16
@@ -36,7 +33,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
-def train(model, train_loader, optimizer, trajectory_length, jargs):
+def train(model, train_loader, optimizer, trajectory_length, args):
     model.train()
     train_loss = 0
     for _, x in enumerate(train_loader):

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
 import os
-import baseline.constants as constants
+import constants as constants
 
 class StackingGRUCell(nn.Module):
     """
