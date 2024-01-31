@@ -171,7 +171,7 @@ def encoding(modelPath, dataPath, trajectory_length, args):
                     if args.MODEL == 'VAE':
                         result_mu = []
                         result_sigma = []
-                        for idx, src in enumerate(predict_loader):
+                        for _, src in enumerate(predict_loader):
                             src = src[0].to(device)
                             dict = model(src)
                             mu = dict['mu'][:,0,:]
@@ -220,39 +220,18 @@ def encoding(modelPath, dataPath, trajectory_length, args):
 
 
 def main(args):
-    if not args.SSM_KNN:
-        trajectory_length = 60
-        root = '../results/{}/'.format(args.MODEL)
-        if not os.path.exists(root):
-            os.makedirs(root)
-        save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
-        trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
-        trainFilePath = '../data/Train/trainGridData/'
-        if args.TASK=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
-        else:
-            dataPath = '../data/Experiment/experimentGridData/'
-            encoding(save_model, dataPath, trajectory_length, args)
-
+    trajectory_length = 60
+    root = '../results/{}/'.format(args.MODEL)
+    if not os.path.exists(root):
+        os.makedirs(root)
+    save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
+    trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
+    trainFilePath = '../data/{}/Train/trainGridData/'.format(args.DATASET)
+    if args.TASK=="train":
+        trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
     else:
-        trajectory_length = 30
-        root = '../SSM_KNN/'
-        if not os.path.exists(root):
-            os.makedirs(root)
-        root = '../SSM_KNN/{}/'.format(args.MODEL)
-        if not os.path.exists(root):
-            os.makedirs(root)
-        save_model = '../SSM_KNN/{}/{}.pt'.format(args.MODEL, args.MODEL)
-        trainlog = '../SSM_KNN/{}/trainlog.csv'.format(args.MODEL)
-        trainFilePath = '../data/Train/SSM_KNN/DataBase/GridData/'
-        dataPath_1 = '../data/Experiment/SSM_KNN/DataBase_1/GridData/'
-        dataPath_2 = '../data/Experiment/SSM_KNN/DataBase_2/GridData/'
-        if args.TASK=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
-        else:
-            encoding(save_model, dataPath_1, trajectory_length, args)
-            encoding(save_model, dataPath_2, trajectory_length, args)
-
+        dataPath = '../data/{}/Experiment/experimentGridData/'.format(args.DATASET)
+        encoding(save_model, dataPath, trajectory_length, args)
 
 
 if __name__ == '__main__':
@@ -260,9 +239,9 @@ if __name__ == '__main__':
 
     parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
 
-    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "Transformer"], required=True)
+    parser.add_argument("-d", "--DATASET", type=str, default="beijing", choices=["beijing","MCD"] ,help="dataset", required=True)
 
-    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False)
+    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "Transformer"], required=True)
 
     args = parser.parse_args()
 
