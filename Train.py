@@ -1,325 +1,104 @@
-import numpy as np
-import pandas as pd
-import math
-import logging
+from baseFuncs import *
+import torch
+import torch.optim as optim
 import os
 from tqdm import trange
-import argparse
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import matplotlib.pyplot as plt
-
-from classes.VAE import VAE
-from classes.AE import AE
-from classes.transformer import Transformer
-
-
-BATCH_SIZE = 16
-grid_num = 50
-vocab_size = grid_num * grid_num + 2
-dropout = 0.1
-learning_rate = 1e-3
-embedding_dim = 64
-hidden_dim = 32
-latent_dim = 16
-MAX_EPOCH = 300
-
-NUM_HEADS = 8
-NUM_LAYERS = 6
-DIM_FORWARD = 512
+from NVAE import TransformerNvib
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
-def constructTrainingData(filePath, BATCH_SIZE):
-    x = []
-    for file in os.listdir(filePath):
-        data = np.load(filePath + file)
-        x.extend(data)
-    x = np.array(x)
-    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
-    x = x[:resid, :, :]
-    x = x[:, :, 0] # only use the grid num
-    return x
+grid_num = 50
+Batch_size = 16 #B
+dropout = 0.1
+learning_rate = 0.001
+MAX_EPOCH = 20
+ACCUMULATION_STEPS = 1
 
-def constructSingleData(filePath, file, BATCH_SIZE):
-    data = np.load(filePath + file)
-    x = np.array(data)
-    resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
-    x = x[:resid, :, :]
-    return x[:, :,0]
-        
-def parameteroutput(data, file):
-    directory = os.path.dirname(file)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    para = pd.DataFrame(data)
-    with open(file, mode = 'w') as f:
-        para.to_csv(f, index = False, header = None)
-
-def get_logger(filename, verbosity=1, name=None):
-    level_dict = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARNING}
-    formatter = logging.Formatter(
-        "[%(asctime)s][%(filename)s][line:%(lineno)d][%(levelname)s] %(message)s"
-    )
-    logger = logging.getLogger(name)
-    logger.setLevel(level_dict[verbosity])
- 
-    fh = logging.FileHandler(filename, "w")
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
- 
-    sh = logging.StreamHandler()
-    sh.setFormatter(formatter)
-    logger.addHandler(sh)
-    return logger
-
-def plot_loss(train_loss_list, test_loss_list, args):
-    x=[i for i in range(len(train_loss_list))]
-    figure = plt.figure(figsize=(20, 8), dpi=80)
-    plt.plot(x,train_loss_list,label='train_losses')
-    plt.plot(x,test_loss_list,label='test_losses')
-    plt.xlabel("iterations",fontsize=15)
-    plt.ylabel("loss",fontsize=15)
-    plt.legend()
-    plt.grid()
-    if not args.SSM_KNN:
-        plt.savefig('../results/{}/loss_figure.png'.format(args.MODEL))
-    else:
-        plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
-    plt.show()
-
-
-def train(model, train_loader, optimizer, trajectory_length, jargs):
-    model.train()
-    train_loss = 0
-    for _, x in enumerate(train_loader):
-        if args.MODEL == 'VAE' or args.MODEL == "AE":
-            x = x[0].to(device)
-            input_dict = {
-                "x": x,
-            }
-            tgt = x
-        else:
+class Trainer:
+    def __init__(self, model, optimizer, train_loader, test_loader, trajectory_length, grid_num, epoch, ACCUMULATION_STEPS):
+        self.model = model
+        self.optimizer = optimizer
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.trajectory_length = trajectory_length
+        self.grid_num = grid_num
+        self.epoch = epoch
+        self.ACCUMULATION_STEPS = ACCUMULATION_STEPS
+    
+    def training(self):
+        train_losses_value = 0
+        for idx, x in enumerate(self.train_loader):
             x = x[0].transpose(0,1).to(device)
-            eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
-            sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+            eos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num).to(device)
+            sos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num+1).to(device)
             src = torch.cat([x, eos], dim=0)
             tgt = torch.cat([sos, x], dim=0)
 
-            src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
-            tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+            src_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
+            tgt_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
 
-            input_dict = {
-                "src": src,
-                "tgt": tgt,
-                "src_key_padding_mask": src_key_padding_mask,
-                "tgt_key_padding_mask": tgt_key_padding_mask,
-            }
+            train_outputs_dict = self.model(
+                src,
+                tgt,
+                src_key_padding_mask=src_key_padding_mask,
+                tgt_key_padding_mask=tgt_key_padding_mask,
+            )
+            train_losses = self.model.loss(**train_outputs_dict, targets=tgt, epoch=self.epoch)
+            (train_losses["Loss"] / self.ACCUMULATION_STEPS).backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
+            if ((idx + 1) % self.ACCUMULATION_STEPS == 0) or (idx + 1 == len(self.train_loader)):
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+            train_losses_value += train_losses["Loss"].item()
+        return train_losses_value / len(self.train_loader.dataset)
 
-        optimizer.zero_grad()
-        dict = model(**input_dict)
-        loss = model.loss_fn(targets=tgt, **dict)["Loss"]
-        loss.backward()
-        train_loss += loss.item()
-        optimizer.step()
-    return train_loss / len(train_loader.dataset)
-
-def test(model, test_loader, trajectory_length, args):
-    model.eval()
-    test_loss = 0
-    with torch.no_grad():
-        for _, x in enumerate(test_loader):
-            if args.MODEL == 'VAE' or args.MODEL == "AE":
-                x = x[0].to(device)
-                input_dict = {
-                    "x": x,
-                }
-                tgt = x
-            else:
+    def evaluation(self):
+        test_losses_value = 0
+        for _, x in enumerate(self.test_loader):
+            with torch.no_grad():
                 x = x[0].transpose(0,1).to(device)
-                eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
-                sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
+                eos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num).to(device)
+                sos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num+1).to(device)
                 src = torch.cat([x, eos], dim=0)
                 tgt = torch.cat([sos, x], dim=0)
 
-                src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
-                tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
+                src_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
+                tgt_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
 
-                input_dict = {
-                    "src": src,
-                    "tgt": tgt,
-                    "src_key_padding_mask": src_key_padding_mask,
-                    "tgt_key_padding_mask": tgt_key_padding_mask,
-                }
+                test_outputs_dict = self.model(
+                    src,
+                    tgt,
+                    src_key_padding_mask=src_key_padding_mask,
+                    tgt_key_padding_mask=tgt_key_padding_mask,
+                )
+                test_losses = self.model.loss(**test_outputs_dict, targets=tgt, epoch=self.epoch)
+                test_losses_value += test_losses["Loss"].item()
+        return test_losses_value / len(self.test_loader.dataset)
+    
 
-            dict = model(**input_dict)
-            test_loss += model.loss_fn(targets=tgt, **dict)["Loss"].item()
-    return test_loss / len(test_loader.dataset)
-
-
-def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, args):
-    x = constructTrainingData(trainFilePath, BATCH_SIZE)
+def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length):
+    x = constructTrainingData(trainFilePath, Batch_size)
     dataSet = torch.utils.data.TensorDataset(torch.from_numpy(x))
     val_size = int(0.2 * len(dataSet))
-
-    if args.MODEL == 'VAE' or args.MODEL == "AE":
-        model = {
-            "VAE": VAE,
-            "AE": AE,
-        }[args.MODEL](embedding_dim, hidden_dim, latent_dim, vocab_size, BATCH_SIZE, trajectory_length).to(device)
-    elif args.MODEL == 'Transformer':
-        model = {
-            "Transformer": Transformer,
-        }[args.MODEL](latent_dim, NUM_HEADS, NUM_LAYERS, DIM_FORWARD, dropout, vocab_size).to(device)
+    model = TransformerNvib().to(device)
     optimizer = optim.Adam(model.parameters(),lr=learning_rate)
-    
     logger = get_logger(trainlogPath)
     train_loss_list = []
     test_loss_list = []
     print("Start training...")
     for epoch in trange(MAX_EPOCH):
         train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [len(dataSet) - val_size, val_size])
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
-        train_loss = train(model, train_loader, optimizer, trajectory_length, args)
-        test_loss = test(model, test_loader, trajectory_length, args)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Batch_size)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=Batch_size)
+        trainer = Trainer(model, optimizer, train_loader, test_loader, trajectory_length, grid_num, epoch, ACCUMULATION_STEPS)
+        train_loss = trainer.training()
+        test_loss = trainer.evaluation()
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
     torch.save(model, modelSavePath)
-    plot_loss(train_loss_list, test_loss_list, args)
-
-
-def encoding(modelPath, dataPath, trajectory_length, args):
-    if not args.SSM_KNN:
-        indexPath = '../results/{}/Index/'.format(args.MODEL)
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
-    else:
-        indexPath = '../SSM_KNN/{}/Index/'.format(args.MODEL)
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
-        dbNUM = dataPath.split('/')[-3]
-        indexPath = indexPath + dbNUM + '/'
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
-    muPath = indexPath + 'mu/'
-    sigmaPath = indexPath + 'sigma/'
-    probPath = indexPath + 'prob/'
-    for i in trange(2, 9):
-        for j in range(24):
-            FILE = '{}_{}.npy'.format(i, j)
-            if os.path.exists(dataPath+FILE):
-                muFILE = muPath + 'mu_{}_{}.csv'.format(i, j)
-                sigmaFILE = sigmaPath + 'sigma_{}_{}.csv'.format(i, j)
-                probFILE = probPath + 'prob_{}_{}.csv'.format(i, j)
-                x = constructSingleData(dataPath, FILE, BATCH_SIZE)
-                if x.shape[0] > 0:
-                    predict_data = np.array(x)
-                    predict_dataset = torch.utils.data.TensorDataset(torch.from_numpy(predict_data))
-                    predict_loader = torch.utils.data.DataLoader(predict_dataset, batch_size=BATCH_SIZE)
-                    model = torch.load(modelPath)
-                    model.eval()
-                    if args.MODEL == 'VAE':
-                        result_mu = []
-                        result_sigma = []
-                        for idx, src in enumerate(predict_loader):
-                            src = src[0].to(device)
-                            dict = model(src)
-                            mu = dict['mu'][:,0,:]
-                            logvar = dict['logvar'][:,0,:]
-                            result_mu.append(mu.cpu().detach().numpy())
-                            result_sigma.append(logvar.cpu().detach().numpy())
-                        result_mu = np.concatenate(result_mu, axis = 0)
-                        result_sigma = np.concatenate(result_sigma, axis = 0)
-                        parameteroutput(result_mu, muFILE)
-                        parameteroutput(result_sigma, sigmaFILE)
-                    elif args.MODEL == "AE":
-                        result_prob = []
-                        for idx, src in enumerate(predict_loader):
-                            src = src[0].to(device)
-                            dict = model(src)
-                            prob = dict['prob'][:, 0, :]
-                            result_prob.append(prob.cpu().detach().numpy())
-                        result_prob = np.concatenate(result_prob, axis = 0)
-                        parameteroutput(result_prob, probFILE)
-                    elif args.MODEL == "Transformer":
-                        result_prob = []
-                        for _, x in enumerate(predict_loader):
-                            x = x[0].transpose(0,1).to(device)
-                            eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device)
-                            sos = torch.full((1, x.shape[1]), grid_num*grid_num+1).to(device)
-                            src = torch.cat([x, eos], dim=0)
-                            tgt = torch.cat([sos, x], dim=0)
-
-                            src_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
-                            tgt_key_padding_mask = torch.zeros((x.shape[1], trajectory_length + 1), dtype=torch.bool).to(device)
-
-                            input_dict = {
-                                "src": src,
-                                "tgt": tgt,
-                                "src_key_padding_mask": src_key_padding_mask,
-                                "tgt_key_padding_mask": tgt_key_padding_mask,
-                            }
-
-                            dict = model(**input_dict)
-                            encoder_ouput = dict['z']
-                            prob = encoder_ouput.mean(dim=0, keepdim=True) #(1,16,16)
-                            result_prob.append(prob.cpu().detach().numpy())
-                        result_prob = np.concatenate(result_prob, axis = 1)
-                        result_prob =  result_prob.transpose(1,0,2).reshape(result_prob.shape[1], -1)
-                        parameteroutput(result_prob, probFILE)
-
-
-def main(args):
-    if not args.SSM_KNN:
-        trajectory_length = 60
-        root = '../results/{}/'.format(args.MODEL)
-        if not os.path.exists(root):
-            os.makedirs(root)
-        save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
-        trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
-        trainFilePath = '../data/Train/trainGridData/'
-        if args.TASK=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
-        else:
-            dataPath = '../data/Experiment/experimentGridData/'
-            encoding(save_model, dataPath, trajectory_length, args)
-
-    else:
-        trajectory_length = 30
-        root = '../SSM_KNN/'
-        if not os.path.exists(root):
-            os.makedirs(root)
-        root = '../SSM_KNN/{}/'.format(args.MODEL)
-        if not os.path.exists(root):
-            os.makedirs(root)
-        save_model = '../SSM_KNN/{}/{}.pt'.format(args.MODEL, args.MODEL)
-        trainlog = '../SSM_KNN/{}/trainlog.csv'.format(args.MODEL)
-        trainFilePath = '../data/Train/SSM_KNN/DataBase/GridData/'
-        dataPath_1 = '../data/Experiment/SSM_KNN/DataBase_1/GridData/'
-        dataPath_2 = '../data/Experiment/SSM_KNN/DataBase_2/GridData/'
-        if args.TASK=="train":
-            trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
-        else:
-            encoding(save_model, dataPath_1, trajectory_length, args)
-            encoding(save_model, dataPath_2, trajectory_length, args)
-
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
-
-    parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "Transformer"], required=True)
-
-    parser.add_argument("-s", "--SSM_KNN", type=bool, default=False)
-
-    args = parser.parse_args()
-
-    main(args)
+    plot_loss(train_loss_list, test_loss_list)
