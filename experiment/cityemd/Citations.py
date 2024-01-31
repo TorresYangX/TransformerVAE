@@ -41,7 +41,7 @@ def cityEMD(groundTruth, reterievedTrajectories_, method, NLAT=40, NLON=40):
 
 def main(args):
     retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
-    groundTruth = '../data/Experiment/groundTruth/groundTruth_8.csv'
+    groundTruth = '../data/beijing/Experiment/groundTruth/groundTruth_8.csv'
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
     groundTruth = pd.read_csv(groundTruth, header = None)
     # delete last rows of groundTruth so that the length of groundTruth is the same as retrievedTrajectories
@@ -53,7 +53,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--MODEL', type=str, default='VAE', help='model name', choices=["AE", "VAE", "VAE_nvib", 
+    parser.add_argument('-m', '--MODEL', type=str, default='t2vec', help='model name', choices=["AE", "VAE", "VAE_nvib", "t2vec",
                                                                                               "Transformer", "LCSS", "EDR", 
                                                                                               "EDwP", "DTW"], required=True)
     args = parser.parse_args()

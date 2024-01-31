@@ -153,8 +153,8 @@ def main(args):
     path_ = '../results/{}/KDTree{}/EMD/'.format(args.model, args.model)
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../data/Experiment/experiment_data_before_time/'
-    targetData = '../data/Experiment/experiment_data_before_time/'
+    historicalData = '../data/beijing/Experiment/experiment_data_before_time/'
+    targetData = '../data/beijing/Experiment/experiment_data_before_time/'
     para = {
         "AE": {
             'Prob':'../results/AE/Index/prob/'
@@ -171,10 +171,13 @@ def main(args):
         },
         "Transformer": {
             'Prob':'../results/Transformer/Index/prob/'
+        },
+        "t2vec": {
+            'Prob':'../results/AE/Index/prob/'
         }
     }
     
-    groundTruthPath = '../data/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
+    groundTruthPath = '../data/beijing/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
     scoreFile = '../results/{}/KDTree{}/EMD/meanLoss.csv'.format(args.model, args.model)
     targetTrajectories, targetDict = loadData(targetData, BATCH_SIZE, args.day, args.hour, **(para[args.model]))
     targerLen = len(targetTrajectories)
@@ -197,7 +200,7 @@ def main(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model', type=str, default="AE", help='MODEL', choices=["AE", "VAE", "VAE_nvib", "Transformer"], required=True)
+    parser.add_argument('-m','--model', type=str, default="t2vec", help='MODEL', choices=["AE", "VAE", "VAE_nvib", "Transformer", "t2vec"], required=True)
     parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
     parser.add_argument('-hour','--hour', type=int, default=0, help='hour', required=True)
     args = parser.parse_args()

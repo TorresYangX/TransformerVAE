@@ -207,5 +207,5 @@ class EncoderDecoder(nn.Module):
         decoder_h0 = self.encoder_hn2decoder_h0(encoder_hn)
         ## for target we feed the range [BOS:EOS-1] into decoder
         output, decoder_hn = self.decoder(trg[:-1], decoder_h0, H)
-        return output
+        return output, decoder_h0
     

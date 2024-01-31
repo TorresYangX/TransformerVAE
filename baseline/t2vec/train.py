@@ -65,7 +65,7 @@ def genLoss(m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF):
         clip_grad_norm_(m1.parameters(), max_grad_norm)
         m0_optimizer.step()
         m1_optimizer.step()
-    return train_loss.div(batch)
+    return train_loss.div(len(train_loader.dataset))
 
 
 def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
@@ -77,14 +77,28 @@ def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
     criterion = NLLcriterion(vocab_size).to(device)
     lossF = lambda o, t: criterion(o, t)
     
-    m0 = EncoderDecoder(vocab_size,
-                        embedding_dim,
-                        hidden_dim,
-                        num_layers=3,
-                        dropout=dropout,
-                        bidirectional=True).to(device)
-    m1 = nn.Sequential(nn.Linear(hidden_dim, vocab_size),
-                       nn.LogSoftmax(dim=1)).to(device)
+    # if m0, m1 exist, load them
+    if os.path.exists(m0SavePath):
+        print("Loading m0, m1...")
+        m0 = EncoderDecoder(vocab_size,
+                            embedding_dim,
+                            hidden_dim,
+                            num_layers=3,
+                            dropout=dropout,
+                            bidirectional=True).to(device)
+        m0.load_state_dict(torch.load(m0SavePath))
+        m1 = nn.Sequential(nn.Linear(hidden_dim, vocab_size),
+                           nn.LogSoftmax(dim=1)).to(device)
+        m1.load_state_dict(torch.load(m1SavePath))
+    else:
+        m0 = EncoderDecoder(vocab_size,
+                            embedding_dim,
+                            hidden_dim,
+                            num_layers=3,
+                            dropout=dropout,
+                            bidirectional=True).to(device)
+        m1 = nn.Sequential(nn.Linear(hidden_dim, vocab_size),
+                        nn.LogSoftmax(dim=1)).to(device)
         
     m0_optimizer = torch.optim.Adam(m0.parameters(), learning_rate)
     m1_optimizer = torch.optim.Adam(m1.parameters(), learning_rate)
