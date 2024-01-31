@@ -5,9 +5,10 @@ import torch.nn as nn
 from torch.nn.utils import clip_grad_norm_
 import constants
 from tqdm import trange
+from tqdm import tqdm
 import os
 
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 grid_num = 50
 vocab_size = grid_num * grid_num + 2
 dropout = 0.1
@@ -18,6 +19,7 @@ MAX_EPOCH = 300
 max_grad_norm = 5.0
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 
 def NLLcriterion(vocab_size):
@@ -31,8 +33,8 @@ def NLLcriterion(vocab_size):
     return criterion
 
 
-def genLoss(m0, m1, train_loader, lossF):
-    loss = 0
+def genLoss(m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF):
+    train_loss = 0
     for _, x in enumerate(train_loader):
         x = x[0].transpose(0,1).to(device)
         eos = torch.full((1, x.shape[1]), grid_num*grid_num).to(device) # eos = 2500
@@ -51,11 +53,19 @@ def genLoss(m0, m1, train_loader, lossF):
         ## (seq_len, generator_batch, hidden_size) =>
         ## (seq_len*generator_batch, hidden_size)
         o = output.view(-1, output.size(2)) # (seq_len*generator_batch, hidden_size)
-        o = m1(o) 
+        o = m1(o)
         ## (seq_len*generator_batch,)
         t = target.view(-1)
-        loss += lossF(o, t)
-    return loss.div(batch)
+        m0_optimizer.zero_grad()
+        m1_optimizer.zero_grad()
+        loss = lossF(o, t)
+        train_loss += loss
+        loss.backward()
+        clip_grad_norm_(m0.parameters(), max_grad_norm)
+        clip_grad_norm_(m1.parameters(), max_grad_norm)
+        m0_optimizer.step()
+        m1_optimizer.step()
+    return train_loss.div(batch)
 
 
 def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
@@ -81,31 +91,22 @@ def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
     
     logger = get_logger(trainlogPath)
     train_loss_list = []
-    test_loss_list = []
     
     print("Start training...")
-    for epoch in trange(MAX_EPOCH):
+    for epoch in tqdm(range(MAX_EPOCH)):
         train_dataset, _ = torch.utils.data.random_split(dataSet, [len(dataSet) - val_size, val_size])
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-        m0_optimizer.zero_grad()
-        m1_optimizer.zero_grad()
         m0.train()
         m1.train()
-        loss = genLoss(m0, m1, train_loader, lossF)
-        loss.backward()
-        ## clip the gradients
-        clip_grad_norm_(m0.parameters(), max_grad_norm)
-        clip_grad_norm_(m1.parameters(), max_grad_norm)
-        ## one step optimization
-        m0_optimizer.step()
-        m1_optimizer.step()
+        loss = genLoss(m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF)
+        if epoch == 0 or loss < min(train_loss_list):
+            torch.save(m0.state_dict(), m0SavePath)
+            torch.save(m1.state_dict(), m1SavePath)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, loss))
         train_loss_list.append(loss)
     print("End training...")
-    torch.save(m0, m0SavePath)
-    torch.save(m1, m1SavePath)
     args = {'MODEL': 't2vec', 'SSM_KNN': False}
-    plot_loss(train_loss_list, test_loss_list, args)
+    plot_loss(train_loss_list, train_loss_list, args)
     
     
 if __name__ == '__main__':

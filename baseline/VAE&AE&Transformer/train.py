@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 
 from baseFuncs import *
 
-from baseline.models.VAE import VAE
-from baseline.models.AE import AE
-from baseline.models.transformer import Transformer
+from VAE import VAE
+from AE import AE
+from transformer import Transformer
 
 
 BATCH_SIZE = 16

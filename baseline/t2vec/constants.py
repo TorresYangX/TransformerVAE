@@ -1,6 +1,6 @@
 PAD = 0
-BOS = 1
-EOS = 2
+BOS = 2500
+EOS = 2501
 UNK = 3
 
 PAD_WORD = '<blank>'
