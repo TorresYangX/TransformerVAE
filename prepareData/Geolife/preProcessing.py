@@ -6,7 +6,7 @@ import argparse
 
 # longtitude: 116 116.8
 # latitude: 39.6 40.2
-# prigin trajectory min length: 10
+# origin trajectory min length: 10
 # min lon_lat diff = 0.04
 # time interval: 1min
 # time range: 2.1-2.8
