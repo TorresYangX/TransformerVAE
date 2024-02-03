@@ -142,14 +142,14 @@ def KM():
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW", "VAE", "AE", "VAE_nvib", "Transformer"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW", "VAE", "AE", "VAE_nvib", "Transformer", "t2vec"], required=True)
     args = parser.parse_args()
     
 #======================================================================
     #opop = np.ones((4,4,4,4)) # input 1, format should be (n,n,n,n)
     #ospop = np.ones((4,4,4,4)) # input 2, format should be (n,n,n,n)
     opop = np.load('../results/{}/KDTree{}/Evaluate_Yao/OD_MATRIX.npy'.format(args.MODEL, args.MODEL), allow_pickle=True)
-    ospop = np.load('../data/Experiment/groundTruth/OD_MATRIX.npy', allow_pickle=True)
+    ospop = np.load('../data/beijing/Experiment/groundTruth/OD_MATRIX.npy', allow_pickle=True)
 #======================================================================
     gridsize = len(opop)
     print("gridsize:"+str(gridsize))

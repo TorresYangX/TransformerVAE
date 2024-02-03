@@ -4,6 +4,7 @@ import numpy as np
 
 AE =  '../results/AE/KDTreeAE/EMD/emd_.npy'
 VAE = '../results/VAE/KDTreeVAE/EMD/emd_.npy'
+t2vec = '../results/t2vec/KDTreeT2vec/EMD/emd_.npy'
 VAE_nvib = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/emd_.npy'
 Transformer = '../results/Transformer/KDTreeTransformer/EMD/emd_.npy'
 LCSS = '../results/LCSS/KDTreeLCSS/EMD/emd_.npy'
@@ -15,6 +16,7 @@ def lineChart():
 
     AE_data = np.load(AE)
     VAE_data = np.load(VAE)
+    t2vec_data = np.load(t2vec)
     VAE_nvib_data = np.load(VAE_nvib)
     Transformer_data = np.load(Transformer)
     LCSS_data = np.load(LCSS)
@@ -35,11 +37,13 @@ def lineChart():
     y26 = np.log(EDR_data)
     y27 = np.log(EDwP_data)
     y28 = np.log(DTW_data)
+    y29 = np.log(t2vec_data)
 
 
     # Draw a line chart
     plt.plot(x, y21, 'b', linestyle='dotted', linewidth=1.5, label='AE')
     # plt.plot(x, y22, 'r-', linewidth=1.5, label='VAE')
+    plt.plot(x, y29, 'r.', linewidth=1, label='t2vec')
     plt.plot(x, y24, 'k-.', linewidth=1.5, label='Transformer')
     plt.plot(x, y25, 'g-.', linewidth=1.5, label='LCSS')
     plt.plot(x, y26, 'y-', linewidth=1.5, label='EDR')

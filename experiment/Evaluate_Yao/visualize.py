@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 AE =  '../results/AE/KDTreeAE/Evaluate_Yao/MD_NMD.csv'
 VAE = '../results/VAE/KDTreeVAE/Evaluate_Yao/MD_NMD.csv'
+t2vec = '../results/t2vec/KDTreeT2vec/Evaluate_Yao/MD_NMD.csv'
 VAE_nvib = '../results/VAE_nvib/KDTreeVAE_nvib/Evaluate_Yao/MD_NMD.csv'
 Transformer = '../results/Transformer/KDTreeTransformer/Evaluate_Yao/MD_NMD.csv'
 LCSS = '../results/LCSS/KDTreeLCSS/Evaluate_Yao/MD_NMD.csv'
@@ -13,6 +14,7 @@ DTW = '../results/DTW/KDTreeDTW/Evaluate_Yao/MD_NMD.csv'
 
 AE_data = pd.read_csv(AE, header=None).to_numpy()
 VAE_data = pd.read_csv(VAE, header=None).to_numpy()
+t2vec_data = pd.read_csv(t2vec, header=None).to_numpy()
 VAE_nvib_data = pd.read_csv(VAE_nvib, header=None).to_numpy()
 Transformer_data = pd.read_csv(Transformer, header=None).to_numpy()
 LCSS_data = pd.read_csv(LCSS, header=None).to_numpy()
@@ -23,6 +25,7 @@ DTW_data = pd.read_csv(DTW, header=None).to_numpy()
 def matricbarChart():
     AE_NMD = float(AE_data[1][0].split(':')[1])
     VAE_NMD = float(VAE_data[1][0].split(':')[1])
+    t2vec_NMD = float(t2vec_data[1][0].split(':')[1])
     VAE_nvib_NMD = float(VAE_nvib_data[1][0].split(':')[1])
     Transformer_NMD = float(Transformer_data[1][0].split(':')[1])
     LCSS_NMD = float(LCSS_data[1][0].split(':')[1])
@@ -32,6 +35,7 @@ def matricbarChart():
     
     AE_NMA = float(AE_data[2][0].split(':')[1])
     VAE_NMA = float(VAE_data[2][0].split(':')[1])
+    t2vec_NMA = float(t2vec_data[2][0].split(':')[1])
     VAE_nvib_NMA = float(VAE_nvib_data[2][0].split(':')[1])
     Transformer_NMA = float(Transformer_data[2][0].split(':')[1])
     LCSS_NMA = float(LCSS_data[2][0].split(':')[1])
@@ -41,6 +45,7 @@ def matricbarChart():
     
     AE_RRNSA = float(AE_data[3][0].split(':')[1])
     VAE_RRNSA = float(VAE_data[3][0].split(':')[1])
+    t2vec_RRNSA = float(t2vec_data[3][0].split(':')[1])
     VAE_nvib_RRNSA = float(VAE_nvib_data[3][0].split(':')[1])
     Transformer_RRNSA = float(Transformer_data[3][0].split(':')[1])
     LCSS_RRNSA = float(LCSS_data[3][0].split(':')[1])
@@ -50,6 +55,7 @@ def matricbarChart():
     
     AE_SP = float(AE_data[4][0].split(':')[1])
     VAE_SP = float(VAE_data[4][0].split(':')[1])
+    t2vec_SP = float(t2vec_data[4][0].split(':')[1])
     VAE_nvib_SP = float(VAE_nvib_data[4][0].split(':')[1])
     Transformer_SP = float(Transformer_data[4][0].split(':')[1])
     LCSS_SP = float(LCSS_data[4][0].split(':')[1])
@@ -66,18 +72,20 @@ def matricbarChart():
     ax.bar(x - 2*width, [VAE_nvib_NMD, VAE_nvib_NMA, VAE_nvib_RRNSA, VAE_nvib_SP], width, label='NVAE')
     ## AE
     ax.bar(x - width, [AE_NMD, AE_NMA, AE_RRNSA, AE_SP], width, label='AE')
+    ## t2vec
+    ax.bar(x, [t2vec_NMD, t2vec_NMA, t2vec_RRNSA, t2vec_SP], width, label='t2vec')
     ## DTW
-    ax.bar(x, [DTW_NMD, DTW_NMA, DTW_RRNSA, DTW_SP], width, label='DTW')
+    ax.bar(x + width, [DTW_NMD, DTW_NMA, DTW_RRNSA, DTW_SP], width, label='DTW')
     ## EDwP
-    ax.bar(x + width, [EDwP_NMD, EDwP_NMA, EDwP_RRNSA, EDwP_SP], width, label='EDwP')
+    ax.bar(x + 2*width, [EDwP_NMD, EDwP_NMA, EDwP_RRNSA, EDwP_SP], width, label='EDwP')
     ## VAE
-    ax.bar(x + 2*width, [VAE_NMD, VAE_NMA, VAE_RRNSA, VAE_SP], width, label='VAE')
+    ax.bar(x + 3*width, [VAE_NMD, VAE_NMA, VAE_RRNSA, VAE_SP], width, label='VAE')
     ## Transformer
-    ax.bar(x + 3*width, [Transformer_NMD, Transformer_NMA, Transformer_RRNSA, Transformer_SP], width, label='Transformer')
+    ax.bar(x + 4*width, [Transformer_NMD, Transformer_NMA, Transformer_RRNSA, Transformer_SP], width, label='Transformer')
     ## EDR
-    ax.bar(x + 4*width, [EDR_NMD, EDR_NMA, EDR_RRNSA, EDR_SP], width, label='EDR')
+    ax.bar(x + 5*width, [EDR_NMD, EDR_NMA, EDR_RRNSA, EDR_SP], width, label='EDR')
     ## LCSS
-    ax.bar(x + 5*width, [LCSS_NMD, LCSS_NMA, LCSS_RRNSA, LCSS_SP], width, label='LCSS')
+    ax.bar(x + 6*width, [LCSS_NMD, LCSS_NMA, LCSS_RRNSA, LCSS_SP], width, label='LCSS')
     
     ax.set_ylabel('Value', fontweight='bold', fontsize=12)
     ax.set_title('Mobility Tableau', fontweight='bold', fontsize=12)

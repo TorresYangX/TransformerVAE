@@ -35,8 +35,8 @@ def generateNPY(targetFile, saveFilePath):
     
 def main(args):
     if args.MODEL == 'groundTruth':
-        targetData =  '../data/Experiment/groundTruth/groundTruth_8.csv'
-        saveFilePath = '../data/Experiment/groundTruth/OD_MATRIX.npy'
+        targetData =  '../data/beijing/Experiment/groundTruth/groundTruth_8.csv'
+        saveFilePath = '../data/beijing/Experiment/groundTruth/OD_MATRIX.npy'
         generateNPY(targetData, saveFilePath)
     else:
         targetData =  '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
@@ -45,6 +45,6 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW","VAE", "AE", "VAE_nvib", "Transformer", "groundTruth"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW","VAE", "AE", "VAE_nvib", "Transformer", "t2vec", "groundTruth"], required=True)
     args = parser.parse_args()
     main(args)
