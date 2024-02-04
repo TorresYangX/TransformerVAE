@@ -29,7 +29,7 @@ KL_ANNEALING_DIRICHLET = "constant"
 
 dropout = 0.1
 learning_rate = 0.001
-MAX_EPOCH = 20
+MAX_EPOCH = 500
 ACCUMULATION_STEPS = 1
 
 

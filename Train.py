@@ -14,7 +14,7 @@ grid_num = 50
 Batch_size = 16 #B
 dropout = 0.1
 learning_rate = 0.001
-MAX_EPOCH = 20
+MAX_EPOCH = 500
 ACCUMULATION_STEPS = 1
 
 class Trainer:
@@ -96,9 +96,10 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length):
         trainer = Trainer(model, optimizer, train_loader, test_loader, trajectory_length, grid_num, epoch, ACCUMULATION_STEPS)
         train_loss = trainer.training()
         test_loss = trainer.evaluation()
+        if epoch == 0 or train_loss < min(train_loss_list):
+            torch.save(model, modelSavePath)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
-    torch.save(model, modelSavePath)
     plot_loss(train_loss_list, test_loss_list)

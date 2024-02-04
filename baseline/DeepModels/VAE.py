@@ -60,9 +60,9 @@ class VAE(nn.Module):
         BCE = criterion(logits.float(), targets.long()).mean()
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         return {
-            "Loss: ": BCE + KL_WEIGHT * KLD,
-            "BCE: ": BCE,
-            "KLD: ": KLD,
+            "Loss": BCE + KL_WEIGHT * KLD,
+            "BCE": BCE,
+            "KLD": KLD,
         }
 
     def forward(self, x):

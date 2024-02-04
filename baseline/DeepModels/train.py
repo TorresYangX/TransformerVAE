@@ -18,11 +18,11 @@ BATCH_SIZE = 16
 grid_num = 50
 vocab_size = grid_num * grid_num + 2
 dropout = 0.1
-learning_rate = 1e-3
+learning_rate = 1e-7
 embedding_dim = 64
 hidden_dim = 32
 latent_dim = 16
-MAX_EPOCH = 300
+MAX_EPOCH = 500
 
 NUM_HEADS = 8
 NUM_LAYERS = 6
@@ -103,6 +103,7 @@ def test(model, test_loader, trajectory_length, args):
 
 def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, args):
     x = constructTrainingData(trainFilePath, BATCH_SIZE)
+    print(x.shape)
     dataSet = torch.utils.data.TensorDataset(torch.from_numpy(x))
     val_size = int(0.2 * len(dataSet))
 
@@ -123,31 +124,23 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
     print("Start training...")
     for epoch in trange(MAX_EPOCH):
         train_dataset, test_dataset = torch.utils.data.random_split(dataSet, [len(dataSet) - val_size, val_size])
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, drop_last=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE, drop_last=True)
         train_loss = train(model, train_loader, optimizer, trajectory_length, args)
         test_loss = test(model, test_loader, trajectory_length, args)
+        if epoch == 0 or train_loss < min(train_loss_list):
+            torch.save(model, modelSavePath)
         logger.info('Epoch:[{}/{}]\t Train Loss={:.4f}\t Test Loss={:.4f}'.format(epoch+1 , MAX_EPOCH, train_loss, test_loss ))
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
     print("End training...")
-    torch.save(model, modelSavePath)
     plot_loss(train_loss_list, test_loss_list, args)
 
 
 def encoding(modelPath, dataPath, trajectory_length, args):
-    if not args.SSM_KNN:
-        indexPath = '../results/{}/Index/'.format(args.MODEL)
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
-    else:
-        indexPath = '../SSM_KNN/{}/Index/'.format(args.MODEL)
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
-        dbNUM = dataPath.split('/')[-3]
-        indexPath = indexPath + dbNUM + '/'
-        if not os.path.exists(indexPath):
-            os.makedirs(indexPath)
+    indexPath = '../results/{}/Index/'.format(args.MODEL)
+    if not os.path.exists(indexPath):
+        os.makedirs(indexPath)
     muPath = indexPath + 'mu/'
     sigmaPath = indexPath + 'sigma/'
     probPath = indexPath + 'prob/'
@@ -218,16 +211,20 @@ def encoding(modelPath, dataPath, trajectory_length, args):
 
 def main(args):
     trajectory_length = 60
-    root = '../results/{}/'.format(args.MODEL)
+    root = '../results/{}/{}/'.format(args.DATASET, args.MODEL)
     if not os.path.exists(root):
         os.makedirs(root)
-    save_model = '../results/{}/{}.pt'.format(args.MODEL, args.MODEL)
-    trainlog = '../results/{}/trainlog.csv'.format(args.MODEL)
-    trainFilePath = '../data/{}/Train/trainGridData/'.format(args.DATASET)
+    save_model = root+'{}.pt'.format(args.MODEL, args.MODEL)
+    trainlog = root+'trainlog.csv'.format(args.MODEL)
+    if args.DATASET == "Geolife":
+        trainFilePath = '../data/Geolife/Train/trainGridData/'
+        dataPath = '../data/Geolife/Experiment/experimentGridData/'
+    else:
+        trainFilePath = '../data/Porto/gridData/'
+        dataPath = '../data/Porto/Experiment/gridData/'
     if args.TASK=="train":
         trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
     else:
-        dataPath = '../data/{}/Experiment/experimentGridData/'.format(args.DATASET)
         encoding(save_model, dataPath, trajectory_length, args)
 
 
@@ -236,7 +233,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-t", "--TASK", type=str, default='train', choices=["train","encode"],help="train or encode", required=True)
 
-    parser.add_argument("-d", "--DATASET", type=str, default="beijing", choices=["beijing","MCD"] ,help="dataset", required=True)
+    parser.add_argument("-d", "--DATASET", type=str, default="Geolife", choices=["Geolife","Porto"] ,help="dataset", required=True)
 
     parser.add_argument("-m", "--MODEL", type=str, default="VAE", choices=["VAE", "AE", "Transformer"], required=True)
 

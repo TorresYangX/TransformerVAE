@@ -4,8 +4,8 @@
 #SBATCH -J t2vec
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --qos=gpulab02
 
 source activate nvib
-python experiment/cityemd/Citations.py -m t2vec
+python main.py -t train -d Porto

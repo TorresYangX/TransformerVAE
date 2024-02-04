@@ -7,6 +7,7 @@ import constants
 from tqdm import trange
 from tqdm import tqdm
 import os
+import argparse
 
 BATCH_SIZE = 64
 grid_num = 50
@@ -46,8 +47,7 @@ def genLoss(m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF):
         src = src.long()
         lengths = torch.full((1, x.shape[1]), x.shape[0]).to(device)
         tgt = tgt.long()
-        output = m0(src, lengths, tgt) # (seq_len, batch, hidden_size)
-        batch = output.size(1) #16
+        output, _ = m0(src, lengths, tgt) # (seq_len, batch, hidden_size)
         ## we want to decode target in range [BOS+1:EOS]
         target = tgt[1:]
         ## (seq_len, generator_batch, hidden_size) =>
@@ -124,13 +124,21 @@ def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
     
     
 if __name__ == '__main__':
-    root = '../results/t2vec/'
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-d", "--dataset", type=str, default="beijing", choices=["Geolife","Porto"] ,help="dataset", required=True)
+    
+    args = parser.parse_args()
+    
+    root = '../results/{}/t2vec/'.format(args.dataset)
     if not os.path.exists(root):
         os.makedirs(root)
-    dataset = ['beijing', 'MCD']
-    trainFilePath = '../data/{}/Train/trainGridData/'.format(dataset[0])
-    m0SavePath = '../results/t2vec/m0.pt'
-    m1SavePath = '../results/t2vec/m1.pt'
-    trainlogPath = '../results/t2vec/train.log'
+    if args.dataset == "Geolife":
+        trainFilePath = '../data/Geolife/Train/trainGridData/'
+    else:
+        trainFilePath = '../data/Porto/gridData/'
+    m0SavePath = root+'m0.pt'
+    m1SavePath = root+'m1.pt'
+    trainlogPath = root+'train.log'
     trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath)
     
