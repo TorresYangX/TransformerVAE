@@ -13,7 +13,7 @@ def constructTrainingData(filePath, BATCH_SIZE):
     x = np.array(x)
     resid = (x.shape[0] // BATCH_SIZE) * BATCH_SIZE
     x = x[:resid, :, :]
-    x = x[:, :, 0] # only use the grid num
+    x = x[:, :, 0]
     return x
 
 def constructSingleData(filePath, file, BATCH_SIZE):
