@@ -5,7 +5,7 @@ import numpy as np
 AE =  '../results/AE/KDTreeAE/EMD/emd_.npy'
 VAE = '../results/VAE/KDTreeVAE/EMD/emd_.npy'
 t2vec = '../results/t2vec/KDTreeT2vec/EMD/emd_.npy'
-VAE_nvib = '../results/VAE_nvib/KDTreeVAE_nvib/EMD/emd_.npy'
+NVAE = '../results/NVAE/KDTreeNVAE/EMD/emd_.npy'
 Transformer = '../results/Transformer/KDTreeTransformer/EMD/emd_.npy'
 LCSS = '../results/LCSS/KDTreeLCSS/EMD/emd_.npy'
 EDR = '../results/EDR/KDTreeEDR/EMD/emd_.npy'
@@ -17,7 +17,7 @@ def lineChart():
     AE_data = np.load(AE)
     VAE_data = np.load(VAE)
     t2vec_data = np.load(t2vec)
-    VAE_nvib_data = np.load(VAE_nvib)
+    NVAE_data = np.load(NVAE)
     Transformer_data = np.load(Transformer)
     LCSS_data = np.load(LCSS)
     EDR_data = np.load(EDR)
@@ -31,7 +31,7 @@ def lineChart():
 
     y21 = np.log(AE_data)
     y22 = np.log(VAE_data)
-    y23 = np.log(VAE_nvib_data)
+    y23 = np.log(NVAE_data)
     y24 = np.log(Transformer_data)
     y25 = np.log(LCSS_data)
     y26 = np.log(EDR_data)

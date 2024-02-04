@@ -66,8 +66,13 @@ class DataLoader:
                 data['GRID_ID'] = data['POLYLINE'].apply(lambda x: [int((i[0] + 8.7) / grid_size) * grid_num + int((i[1] - 41.04) / grid_size) for i in x])
                 if not os.path.exists(self.girdDataPath):
                     os.makedirs(self.girdDataPath)
-                gridData = np.array(data['GRID_ID'].tolist())
-                np.save(self.girdDataPath + '{}_{}.npy'.format(i, j), gridData)
+                # concatenate the GRID_ID and TIMESTAMP, TAXI_ID, make it a 3D array, and save it as a .npy file
+                output = np.zeros((len(data), 60, 3))
+                for k in range(len(data)):
+                    output[k, :, 0] = data['GRID_ID'][k]
+                    output[k, :, 1] = [0] * 60
+                    output[k, :, 2] = [j] * 60
+                np.save(self.girdDataPath + '{}_{}.npy'.format(i, j), output)
                 
         
 if __name__ == '__main__':

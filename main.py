@@ -5,13 +5,18 @@ import argparse
 
 def main(args):
     trajectory_length = 60
-    root = '../results/VAE_nvib/'
+    root = '../results/{}/NVAE/'.format(args.dataset)
     if not os.path.exists(root):
         os.makedirs(root)
-    save_model = '../results/VAE_nvib/VAE_nvib.pt'
-    trainlog = '../results/VAE_nvib/trainlog.csv'
-    trainFilePath = '../data/{}/Train/trainGridData/'.format(args.dataset)
-    dataPath = '../data/{}/Experiment/experimentGridData/'.format(args.dataset)
+    save_model = root+ 'NVAE.pt'
+    trainlog = root + 'trainlog.csv'
+    if args.dataset == "Geolife":
+        trainFilePath = '../data/Geolife/Train/trainGridData/'
+        dataPath = '../data/Geolife/Experiment/experimentGridData/'
+    else:
+        trainFilePath = '../data/Porto/gridData/'
+        dataPath = '../data/Porto/Experiment/gridData/'
+    
     if args.task=="train":
         trainModel(trainFilePath, save_model, trainlog, trajectory_length)
     else:
@@ -25,7 +30,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-t", "--task", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
 
-    parser.add_argument("-d", "--dataset", type=str, default="beijing", choices=["beijing","MCD"] ,help="dataset", required=True)
+    parser.add_argument("-d", "--dataset", type=str, default="beijing", choices=["Geolife","Porto"] ,help="dataset", required=True)
     
     args = parser.parse_args()
 

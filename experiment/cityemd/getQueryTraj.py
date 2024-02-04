@@ -30,6 +30,6 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', type=str, default='AE', help='model name', choices=['AE', 'VAE', 'VAE_nvib', 'Transformer', 'LCSS', 'EDR', 'EDwP', 'DTW']),
+    parser.add_argument('-m', '--model', type=str, default='AE', help='model name', choices=['AE', 'VAE', 'NVAE', 'Transformer', 'LCSS', 'EDR', 'EDwP', 'DTW']),
     args = parser.parse_args()
     main(args)

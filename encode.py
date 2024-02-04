@@ -19,10 +19,10 @@ class IndexEncoder():
         self.Batch_size = Batch_size
     
     def encoding(self, dataPath):
-        muFolder = '../results/VAE_nvib/Index/mu/'
-        sigmaFolder = '../results/VAE_nvib/Index/sigma/'
-        piFolder = '../results/VAE_nvib/Index/pi/'
-        alphaFolder = '../results/VAE_nvib/Index/alpha/'
+        muFolder = '../results/NVAE/Index/mu/'
+        sigmaFolder = '../results/NVAE/Index/sigma/'
+        piFolder = '../results/NVAE/Index/pi/'
+        alphaFolder = '../results/NVAE/Index/alpha/'
         if not os.path.exists(muFolder):
             os.makedirs(muFolder)
         if not os.path.exists(sigmaFolder):

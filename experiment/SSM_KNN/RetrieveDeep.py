@@ -180,11 +180,11 @@ def main(args):
                 'Mu':'../SSM_KNN/VAE/Index/Database_1/mu/',
                 'Sigma': '../SSM_KNN/VAE/Index/Database_1/sigma/'
             },
-            "VAE_nvib": {
-                'Mu':'../SSM_KNN/VAE_nvib/Index/Database_1/mu/',
-                'Sigma': '../SSM_KNN/VAE_nvib/Index/Database_1/sigma/',
-                'Pi': '../SSM_KNN/VAE_nvib/Index/Database_1/pi/',
-                'Alpha': '../SSM_KNN/VAE_nvib/Index/Database_1/alpha/'
+            "NVAE": {
+                'Mu':'../SSM_KNN/NVAE/Index/Database_1/mu/',
+                'Sigma': '../SSM_KNN/NVAE/Index/Database_1/sigma/',
+                'Pi': '../SSM_KNN/NVAE/Index/Database_1/pi/',
+                'Alpha': '../SSM_KNN/NVAE/Index/Database_1/alpha/'
             }
         },
         "historical": {
@@ -195,11 +195,11 @@ def main(args):
                 'Mu':'../SSM_KNN/VAE/Index/Database_2/mu/',
                 'Sigma': '../SSM_KNN/VAE/Index/Database_2/sigma/'
             },
-            "VAE_nvib": {
-                'Mu':'../SSM_KNN/VAE_nvib/Index/Database_2/mu/',
-                'Sigma': '../SSM_KNN/VAE_nvib/Index/Database_2/sigma/',
-                'Pi': '../SSM_KNN/VAE_nvib/Index/Database_2/pi/',
-                'Alpha': '../SSM_KNN/VAE_nvib/Index/Database_2/alpha/'
+            "NVAE": {
+                'Mu':'../SSM_KNN/NVAE/Index/Database_2/mu/',
+                'Sigma': '../SSM_KNN/NVAE/Index/Database_2/sigma/',
+                'Pi': '../SSM_KNN/NVAE/Index/Database_2/pi/',
+                'Alpha': '../SSM_KNN/NVAE/Index/Database_2/alpha/'
             }
         }
     }
@@ -222,7 +222,7 @@ def main(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model', type=str, default="AE", help='MODEL', choices=["AE", "VAE", "VAE_nvib"], required=True)
+    parser.add_argument('-m','--model', type=str, default="AE", help='MODEL', choices=["AE", "VAE", "NVAE"], required=True)
     parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
     parser.add_argument('-hour','--hour', type=int, default=0, help='hour', required=True)
     args = parser.parse_args()

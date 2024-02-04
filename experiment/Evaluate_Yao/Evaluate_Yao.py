@@ -142,7 +142,7 @@ def KM():
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW", "VAE", "AE", "VAE_nvib", "Transformer", "t2vec"], required=True)
+    parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW", "VAE", "AE", "NVAE", "Transformer", "t2vec"], required=True)
     args = parser.parse_args()
     
 #======================================================================

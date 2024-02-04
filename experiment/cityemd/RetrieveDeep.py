@@ -163,11 +163,11 @@ def main(args):
             'Mu':'../results/VAE/Index/mu/',
             'Sigma': '../results/VAE/Index/sigma/'
         },
-        "VAE_nvib": {
-            'Mu':'../results/VAE_nvib/Index/mu/',
-            'Sigma': '../results/VAE_nvib/Index/sigma/',
-            'Pi': '../results/VAE_nvib/Index/pi/',
-            'Alpha': '../results/VAE_nvib/Index/alpha/'
+        "NVAE": {
+            'Mu':'../results/NVAE/Index/mu/',
+            'Sigma': '../results/NVAE/Index/sigma/',
+            'Pi': '../results/NVAE/Index/pi/',
+            'Alpha': '../results/NVAE/Index/alpha/'
         },
         "Transformer": {
             'Prob':'../results/Transformer/Index/prob/'
@@ -200,7 +200,7 @@ def main(args):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model', type=str, default="t2vec", help='MODEL', choices=["AE", "VAE", "VAE_nvib", "Transformer", "t2vec"], required=True)
+    parser.add_argument('-m','--model', type=str, default="t2vec", help='MODEL', choices=["AE", "VAE", "NVAE", "Transformer", "t2vec"], required=True)
     parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
     parser.add_argument('-hour','--hour', type=int, default=0, help='hour', required=True)
     args = parser.parse_args()

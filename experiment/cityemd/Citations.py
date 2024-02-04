@@ -53,7 +53,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--MODEL', type=str, default='t2vec', help='model name', choices=["AE", "VAE", "VAE_nvib", "t2vec",
+    parser.add_argument('-m', '--MODEL', type=str, default='t2vec', help='model name', choices=["AE", "VAE", "NVAE", "t2vec",
                                                                                               "Transformer", "LCSS", "EDR", 
                                                                                               "EDwP", "DTW"], required=True)
     args = parser.parse_args()
