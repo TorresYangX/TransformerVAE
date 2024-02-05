@@ -27,11 +27,11 @@ def getGroundTruth(args, groundTruthPath, dataPath):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--day', type=str, default='2', choices=["2","3","4","5","6","7","8"], required=True, help="day of the data")
+    parser.add_argument('-d', '--day', type=str, required=True, help="day of the data")
     args = parser.parse_args()
-    groundTruthPath = '../data/Experiment/groundTruth'
+    groundTruthPath = '../data/Porto/groundTruth/'
     if not os.path.exists(groundTruthPath):
         os.mkdir(groundTruthPath)
-    groundTruthPath = '../data/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
-    dataPath = '../data/Experiment/experiment_data_before_time/'
+    groundTruthPath = groundTruthPath+'groundTruth_{}.csv'.format(args.day)
+    dataPath = '../data/Porto/timeData/'
     getGroundTruth(args, groundTruthPath, dataPath)

@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import KDTree
-import time
 import os
 from pyemd import emd
 from tqdm import trange
@@ -147,38 +146,42 @@ def retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTraje
 
 def main(args):
     BATCH_SIZE = 16
-    path_ = '../results/{}/KDTree{}'.format(args.model, args.model)
+    path_ = '../results/{}/{}/KDTree{}'.format(args.dataset,args.model, args.model)
     if not os.path.exists(path_):
         os.mkdir(path_)
-    path_ = '../results/{}/KDTree{}/EMD/'.format(args.model, args.model)
+    path_ = '../results/{}/{}/KDTree{}/EMD/'.format(args.dataset,args.model, args.model)
     if not os.path.exists(path_):
         os.mkdir(path_)
-    historicalData = '../data/beijing/Experiment/experiment_data_before_time/'
-    targetData = '../data/beijing/Experiment/experiment_data_before_time/'
+    if args.dataset == "Geolife":
+        historicalData = '../data/Geolife/Experiment/experiment_data_before_time/'
+        targetData = '../data/Geolife/Experiment/experiment_data_before_time/'
+        groundTruthPath = '../data/Geolife/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
+    else:
+        historicalData = '../data/Porto/timeData/'
+        targetData = '../data/Porto/timeData/'
+        groundTruthPath = '../data/Porto/groundTruth/groundTruth_{}.csv'.format(args.day)
     para = {
         "AE": {
-            'Prob':'../results/AE/Index/prob/'
+            'Prob':'../results/{}/AE/Index/prob/'.format(args.dataset)
         },
         "VAE": {
-            'Mu':'../results/VAE/Index/mu/',
-            'Sigma': '../results/VAE/Index/sigma/'
+            'Mu':'../results/{}/VAE/Index/mu/'.format(args.dataset),
+            'Sigma': '../results/{}/VAE/Index/sigma/'.format(args.dataset)
         },
         "NVAE": {
-            'Mu':'../results/NVAE/Index/mu/',
-            'Sigma': '../results/NVAE/Index/sigma/',
-            'Pi': '../results/NVAE/Index/pi/',
-            'Alpha': '../results/NVAE/Index/alpha/'
+            'Mu':'../results/{}/NVAE/Index/mu/'.format(args.dataset),
+            'Sigma': '../results/{}/NVAE/Index/sigma/'.format(args.dataset),
+            'Pi': '../results/{}/NVAE/Index/pi/'.format(args.dataset),
+            'Alpha': '../results/{}/NVAE/Index/alpha/'.format(args.dataset)
         },
         "Transformer": {
-            'Prob':'../results/Transformer/Index/prob/'
+            'Prob':'../results/{}/Transformer/Index/prob/'.format(args.dataset)
         },
         "t2vec": {
-            'Prob':'../results/AE/Index/prob/'
+            'Prob':'../results/{}/AE/Index/prob/'.format(args.dataset)
         }
     }
-    
-    groundTruthPath = '../data/beijing/Experiment/groundTruth/groundTruth_{}.csv'.format(args.day)
-    scoreFile = '../results/{}/KDTree{}/EMD/meanLoss.csv'.format(args.model, args.model)
+    scoreFile = '../results/{}/{}/KDTree{}/EMD/meanLoss.csv'.format(args.dataset, args.model, args.model)
     targetTrajectories, targetDict = loadData(targetData, BATCH_SIZE, args.day, args.hour, **(para[args.model]))
     targerLen = len(targetTrajectories)
     groundTruthLen = len(pd.read_csv(groundTruthPath, header = None))
@@ -190,10 +193,10 @@ def main(args):
     print('targetNum: {}'.format(targetNum))
     historicalTrajectories, historicalProb_, historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_ = loadHistoricalData(historicalData, BATCH_SIZE, 
                                                                                                                   args.day, args.hour, 
-                                                                                                                  history=6, **(para[args.model]))
+                                                                                                                  history=11, **(para[args.model]))
     historicalProb_ = pd.concat([historicalProb_, historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_], axis=1)
     historicalProb_ = historicalProb_.values
-    retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.model, args.model)
+    retrievedTrajectories = '../results/{}/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.dataset, args.model, args.model)
     retrieval(scoreFile, targetProb_, historicalProb_, targetNum, retrievedTrajectories, historicalTrajectories, len(para[args.model]))
     retrievalLen = len(pd.read_csv(retrievedTrajectories, header = None))
     print('retrieval length: {}'.format(retrievalLen))
@@ -201,7 +204,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m','--model', type=str, default="t2vec", help='MODEL', choices=["AE", "VAE", "NVAE", "Transformer", "t2vec"], required=True)
-    parser.add_argument('-d','--day', type=int, default=2, help='day', required=True)
+    parser.add_argument("-d", "--dataset", type=str, default="Geolife", choices=["Geolife","Porto"] ,help="dataset", required=True)
+    parser.add_argument('-day','--day', type=int, default=2, help='day', required=True)
     parser.add_argument('-hour','--hour', type=int, default=0, help='hour', required=True)
     args = parser.parse_args()
     main(args)

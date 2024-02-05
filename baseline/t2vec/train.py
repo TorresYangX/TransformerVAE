@@ -126,7 +126,7 @@ def trainModel(trainFilePath, m0SavePath, m1SavePath, trainlogPath):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-d", "--dataset", type=str, default="beijing", choices=["Geolife","Porto"] ,help="dataset", required=True)
+    parser.add_argument("-d", "--dataset", type=str, default="Geolife", choices=["Geolife","Porto"] ,help="dataset", required=True)
     
     args = parser.parse_args()
     

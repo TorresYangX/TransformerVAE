@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-t", "--task", type=str, default="train", choices=["train","encode"] ,help="train or encode", required=True)
 
-    parser.add_argument("-d", "--dataset", type=str, default="beijing", choices=["Geolife","Porto"] ,help="dataset", required=True)
+    parser.add_argument("-d", "--dataset", type=str, default="Geolife", choices=["Geolife","Porto"] ,help="dataset", required=True)
     
     args = parser.parse_args()
 
