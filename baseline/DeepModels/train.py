@@ -137,14 +137,14 @@ def trainModel(trainFilePath, modelSavePath, trainlogPath, trajectory_length, ar
     plot_loss(train_loss_list, test_loss_list, args)
 
 
-def encoding(modelPath, dataPath, trajectory_length, args):
-    indexPath = '../results/{}/Index/'.format(args.MODEL)
+def encoding(modelPath, dataPath, trajectory_length, args, root):
+    indexPath = root+'Index/'
     if not os.path.exists(indexPath):
         os.makedirs(indexPath)
     muPath = indexPath + 'mu/'
     sigmaPath = indexPath + 'sigma/'
     probPath = indexPath + 'prob/'
-    for i in trange(2, 9):
+    for i in trange(1, 32):
         for j in range(24):
             FILE = '{}_{}.npy'.format(i, j)
             if os.path.exists(dataPath+FILE):
@@ -221,11 +221,11 @@ def main(args):
         dataPath = '../data/Geolife/Experiment/experimentGridData/'
     else:
         trainFilePath = '../data/Porto/gridData/'
-        dataPath = '../data/Porto/Experiment/gridData/'
+        dataPath = '../data/Porto/gridData/'
     if args.TASK=="train":
         trainModel(trainFilePath, save_model, trainlog, trajectory_length, args)
     else:
-        encoding(save_model, dataPath, trajectory_length, args)
+        encoding(save_model, dataPath, trajectory_length, args, root)
 
 
 if __name__ == '__main__':

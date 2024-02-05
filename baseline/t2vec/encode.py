@@ -11,8 +11,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
-m0SavePath = '../results/t2vec/m0.pt'
-m1SavePath = '../results/t2vec/m1.pt'
+m0SavePath = '../results/Porto/t2vec/m0.pt'
+m1SavePath = '../results/Porto/t2vec/m1.pt'
 grid_num = 50
 Batch_size = 16
 vocab_size = 2502
@@ -29,10 +29,10 @@ class IndexEncoder():
         self.Batch_size = Batch_size
     
     def encoding(self, dataPath):
-        indexFolder = '../results/t2vec/Index/prob/'
+        indexFolder = '../results/Porto/t2vec/Index/prob/'
         if not os.path.exists(indexFolder):
             os.makedirs(indexFolder)
-        for i in trange(2, 9):
+        for i in trange(1, 32):
             for j in range(24):
                 FILE = '{}_{}.npy'.format(i, j)
                 if os.path.exists(dataPath+FILE):
@@ -75,7 +75,7 @@ if __name__ == '__main__':
                        nn.LogSoftmax(dim=1)).to(device)
     m1.load_state_dict(torch.load(m1SavePath))
     # load data
-    dataPath = '../data/beijing/Experiment/experimentGridData/'
+    dataPath = '../data/Porto/gridData/'
     # encoding
     indexEncoder = IndexEncoder(m0, m1, grid_num, embedding_dim, Batch_size)
     indexEncoder.encoding(dataPath)

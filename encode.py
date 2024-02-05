@@ -11,18 +11,18 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 class IndexEncoder():
-    def __init__(self, model, trajectory_length, grid_num, embedding_dim, Batch_size):
-        self.model = model
+    def __init__(self, modelPath, trajectory_length, grid_num, embedding_dim, Batch_size):
+        self.modelPath = modelPath
         self.trajectory_length = trajectory_length
         self.grid_num = grid_num
         self.embedding_dim = embedding_dim
         self.Batch_size = Batch_size
     
-    def encoding(self, dataPath):
-        muFolder = '../results/NVAE/Index/mu/'
-        sigmaFolder = '../results/NVAE/Index/sigma/'
-        piFolder = '../results/NVAE/Index/pi/'
-        alphaFolder = '../results/NVAE/Index/alpha/'
+    def encoding(self, dataPath, rootPath):
+        muFolder = rootPath+'Index/mu/'
+        sigmaFolder = rootPath+'Index/sigma/'
+        piFolder = rootPath+'Index/pi/'
+        alphaFolder = rootPath+'Index/alpha/'
         if not os.path.exists(muFolder):
             os.makedirs(muFolder)
         if not os.path.exists(sigmaFolder):
@@ -31,7 +31,7 @@ class IndexEncoder():
             os.makedirs(piFolder)
         if not os.path.exists(alphaFolder):
             os.makedirs(alphaFolder)
-        for i in trange(2, 9):
+        for i in trange(1, 32):
             for j in range(24):
                 FILE = '{}_{}.npy'.format(i, j)
                 if os.path.exists(dataPath+FILE):
@@ -44,7 +44,8 @@ class IndexEncoder():
                         predict_data = np.array(x)
                         predict_dataset = torch.utils.data.TensorDataset(torch.from_numpy(predict_data))
                         predict_loader = torch.utils.data.DataLoader(predict_dataset, batch_size=self.Batch_size)
-                        self.model.eval()
+                        model = torch.load(self.modelPath)
+                        model.eval()
                         result_mu = []
                         result_sigma = []
                         result_pi = []
@@ -58,7 +59,7 @@ class IndexEncoder():
                             src_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
                             tgt_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
                             # Forward pass
-                            outputs_dict = self.model(
+                            outputs_dict = model(
                                 src,
                                 tgt,
                                 src_key_padding_mask=src_key_padding_mask,

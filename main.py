@@ -15,13 +15,13 @@ def main(args):
         dataPath = '../data/Geolife/Experiment/experimentGridData/'
     else:
         trainFilePath = '../data/Porto/gridData/'
-        dataPath = '../data/Porto/Experiment/gridData/'
+        dataPath = '../data/Porto/gridData/'
     
     if args.task=="train":
         trainModel(trainFilePath, save_model, trainlog, trajectory_length)
     else:
         indexEncoder = IndexEncoder(save_model, trajectory_length, 50, 16, 16)
-        indexEncoder.encoding(save_model, dataPath, trajectory_length)
+        indexEncoder.encoding(dataPath, root)
 
 
 
