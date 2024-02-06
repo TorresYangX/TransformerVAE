@@ -32,7 +32,7 @@ def loadHistoricalData(dataPath, BATCH_SIZE, targetData, history):
                     temp = loadData(dataPath + file, BATCH_SIZE)
                     historicalTrajectories = pd.concat([historicalTrajectories, temp], axis=0)
         for i in range(int(day), int(day)+1):
-            for j in range(int(hour)+1): ## weahter historical data is include the target data ??? 
+            for j in range(int(hour)+1): 
                 file = '{}_{}.csv'.format(i, j)
                 if os.path.exists(dataPath + file):
                     temp = loadData(dataPath + file, BATCH_SIZE)
@@ -192,7 +192,7 @@ def traj_length(traj):
     return sum_len
 
 
-def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=16):
+def main(function_map, dataset, method_, history, targetData, historicalData, BATCH_SIZE=16):
     targetTraj = loadData(targetData, BATCH_SIZE)
     targetDataNum = int(len(targetTraj)/60)
     print(targetDataNum)
@@ -202,7 +202,7 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     targetTrajectories_ = np.array([list(a) for a in zip(targetTraj.latitude.tolist(), targetTraj.longitude.tolist())]).reshape((int(len(targetTraj)/60), 60, 2))
     historicalTrajectories_ = np.array([list(a) for a in zip(historicalTraj.latitude.tolist(), historicalTraj.longitude.tolist())]).reshape((int(len(historicalTraj)/60), 60, 2))   
 
-    outputPath = '../results/{}/'.format(method_)
+    outputPath = '../results/{}/{}/'.format(dataset, method_)
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
     outputFile = outputPath + 'history_{}.npy'.format(str(history))
@@ -236,10 +236,10 @@ def main(function_map, method_, history, targetData, historicalData, BATCH_SIZE=
     return 0
     
 if __name__ == '__main__':
-    data = pd.read_csv('../data/Experiment/experiment_data_before_time/8_7.csv', header=None)
+    data = pd.read_csv('../data/Porto/timeData/12_18.csv', header=None)
     data.columns = ['time', 'lon', 'lat', 'id']
-    choose1 = data[data.id == 89]
-    choose2 = data[data.id == 96] 
+    choose1 = data[data.id == 20000408]
+    choose2 = data[data.id == 20000345] 
     traj1 = [list(a) for a in (zip(choose1.lat.tolist(), choose1.lon.tolist()))]
     traj2 = [list(a) for a in (zip(choose2.lat.tolist(), choose2.lon.tolist()))]
     print(len(traj1), len(traj2))
@@ -289,10 +289,11 @@ if __name__ == '__main__':
     
     parse = argparse.ArgumentParser()
     parse.add_argument('-m', '--method_', dest='method_', required=True, type=str)
+    parse.add_argument('-d', '--dataset', dest='dataset', required=True, type = str)
     parse.add_argument('-hi', '--history', dest='history', required=True, type = int)
     parse.add_argument('-t', '--targetData', dest='targetData', required=True, type = str)
     parse.add_argument('-hd', '--historicalData', dest='historicalData', required=True, type=str)
     parse.add_argument('-b', '--BATCH_SIZE', dest='BATCH_SIZE', required=False, type=int)
     
     args = parse.parse_args()
-    main(function_map, args.method_, args.history, args.targetData, args.historicalData, args.BATCH_SIZE)
+    main(function_map, args.dataset, args.method_, args.history, args.targetData, args.historicalData, args.BATCH_SIZE)

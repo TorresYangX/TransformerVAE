@@ -85,7 +85,7 @@ def loadHistoricalData(dataPath, BATCH_SIZE, day, hour, history, **kwargs):
                     historicalAlpha_ = pd.concat([historicalAlpha_, tempDict['Alpha']], axis=0)
                 
     for i in range(int(day), int(day)+1):
-        for j in range(int(hour)):
+        for j in range(int(hour)+1):
             file = '{}_{}.csv'.format(i, j)
             pathExist = os.path.exists(dataPath + file)
             for key in kwargs.keys():
@@ -124,6 +124,7 @@ def loadHistoricalData(dataPath, BATCH_SIZE, day, hour, history, **kwargs):
     return historicalTrajectories, historicalProb_, historicalMu_, historicalSigma_, historicalPi_, historicalAlpha_
         
 def selectTrajectories(retrievedTrajectories, historicalTrajectories, solution):
+    print('historicalTrajectories length: {}'.format(len(historicalTrajectories)))
     with open(retrievedTrajectories, mode = 'w') as f:
         for i in trange(len(solution)):
             historicalTrajectories[solution[i]*trajectory_length:(solution[i]+1)*trajectory_length

@@ -7,13 +7,12 @@ import argparse
 
 def normalize(trajectories):
     targetX = trajectories[['latitude', 'longitude']]
-    print('targetX.shape: {}'.format(targetX.shape))
-    targetX.loc[:, 'latitude'] = (targetX.loc[:, 'latitude'] - 39.9) / 0.3
-    targetX.loc[:, 'longitude'] = (targetX.loc[:, 'longitude'] - 116.4) / 0.4
+    targetX.loc[:, 'latitude'] = (targetX.loc[:, 'latitude'] - 41.14) / 0.1
+    targetX.loc[:, 'longitude'] = (targetX.loc[:, 'longitude'] + 8.6) / 0.1
     targetX = targetX.values.reshape(-1, 60, 2)
     return targetX
 
-def cityEMD(groundTruth, reterievedTrajectories_, method, NLAT=40, NLON=40):
+def cityEMD(groundTruth, reterievedTrajectories_, method, dataset, NLAT=32, NLON=32):
     targetX = normalize(groundTruth)
     print('targetX.shape: {}'.format(targetX.shape))
     retrievedY = normalize(reterievedTrajectories_)
@@ -33,26 +32,27 @@ def cityEMD(groundTruth, reterievedTrajectories_, method, NLAT=40, NLON=40):
     for kt in trange(59):
         for it in trange(NLAT*NLON):
             emd_[kt] += emd(flowReal[it, :, kt].copy(order='C'), flowRetrieved[it, :, kt].copy(order='C'), flowDistance)
-    np.save('../results/{}/KDTree{}/EMD/emd_.npy'.format(method, method), emd_)
+    np.save('../results/{}/{}/KDTree{}/EMD/emd_.npy'.format(dataset, method, method), emd_)
     return 0
 
 
 
 
 def main(args):
-    retrievedTrajectories = '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
-    groundTruth = '../data/beijing/Experiment/groundTruth/groundTruth_8.csv'
+    retrievedTrajectories = '../results/{}/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.DATASET, args.MODEL, args.MODEL)
+    groundTruth = '../data/Porto/groundTruth/groundTruth_12.csv'
     retrievedTrajectories_ = pd.read_csv(retrievedTrajectories, header = None)
     groundTruth = pd.read_csv(groundTruth, header = None)
     # delete last rows of groundTruth so that the length of groundTruth is the same as retrievedTrajectories
     groundTruth = groundTruth[:len(retrievedTrajectories_)]
     retrievedTrajectories_.columns = ['time', 'longitude', 'latitude', 'id']
     groundTruth.columns = ['time', 'longitude', 'latitude', 'id']
-    cityEMD(groundTruth, retrievedTrajectories_, args.MODEL)
+    cityEMD(groundTruth, retrievedTrajectories_, args.MODEL, args.DATASET)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--DATASET', type=str, default='Porto', help='dataset name', choices=["Geolife", "Porto"], required=True)
     parser.add_argument('-m', '--MODEL', type=str, default='t2vec', help='model name', choices=["AE", "VAE", "NVAE", "t2vec",
                                                                                               "Transformer", "LCSS", "EDR", 
                                                                                               "EDwP", "DTW"], required=True)
