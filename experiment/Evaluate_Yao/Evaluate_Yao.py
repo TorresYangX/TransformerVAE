@@ -142,14 +142,18 @@ def KM():
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--DATASET', type=str, default='Porto', help='dataset name', choices=["Geolife", "Porto"], required=True)
     parser.add_argument("-m", "--MODEL", type=str, default="LCSS", choices=["LCSS", "EDR", "EDwP", "DTW", "VAE", "AE", "NVAE", "Transformer", "t2vec"], required=True)
     args = parser.parse_args()
     
 #======================================================================
     #opop = np.ones((4,4,4,4)) # input 1, format should be (n,n,n,n)
     #ospop = np.ones((4,4,4,4)) # input 2, format should be (n,n,n,n)
-    opop = np.load('../results/{}/KDTree{}/Evaluate_Yao/OD_MATRIX.npy'.format(args.MODEL, args.MODEL), allow_pickle=True)
-    ospop = np.load('../data/beijing/Experiment/groundTruth/OD_MATRIX.npy', allow_pickle=True)
+    opop = np.load('../results/{}/{}/KDTree{}/Evaluate_Yao/OD_MATRIX.npy'.format(args.DATASET, args.MODEL, args.MODEL), allow_pickle=True)
+    if args.DATASET == 'Geolife':
+        ospop = np.load('../data/Geolife/Experiment/groundTruth/OD_MATRIX.npy', allow_pickle=True)
+    else:
+        ospop = np.load('../data/Porto/groundTruth/OD_MATRIX.npy', allow_pickle=True)
 #======================================================================
     gridsize = len(opop)
     print("gridsize:"+str(gridsize))
@@ -281,9 +285,9 @@ if __name__ == "__main__":
     print("incluveness(NMA):"+str(1-math.acos(round(rs[1]*rs[1]+rs[2]*rs[2]-rs[0]*rs[0],8)/round(2*rs[1]*rs[2],8))/math.acos(-1)))
     print("structure similarity(RRNSA):"+str(1-math.acos(round(rs[4]*rs[4]+rs[5]*rs[5]-rs[3]*rs[3],8)/round(2*rs[4]*rs[5],8))/math.acos(-1)))
     # save SP, MD and NMD, NMA, RRNSA to csv
-    if not os.path.exists(os.path.dirname('../results/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.MODEL, args.MODEL))):
-        os.makedirs(os.path.dirname('../results/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.MODEL, args.MODEL)))
-    with open('../results/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.MODEL, args.MODEL), 'w') as f:
+    if not os.path.exists(os.path.dirname('../results/{}/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.DATASET, args.MODEL, args.MODEL))):
+        os.makedirs(os.path.dirname('../results/{}/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.DATASET, args.MODEL, args.MODEL)))
+    with open('../results/{}/{}/KDTree{}/Evaluate_Yao/MD_NMD.csv'.format(args.DATASET, args.MODEL, args.MODEL), 'w') as f:
         f.write("mass difference(MD):"+str(rs[0])+"\n")
         f.write("mass similarity(NMD):"+str(1-rs[0]/(rs[1]+rs[2]))+"\n")
         f.write("incluveness(NMA):"+str(1-math.acos(round(rs[1]*rs[1]+rs[2]*rs[2]-rs[0]*rs[0],8)/round(2*rs[1]*rs[2],8))/math.acos(-1))+"\n")

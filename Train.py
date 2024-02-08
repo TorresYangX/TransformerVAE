@@ -14,7 +14,7 @@ grid_num = 50
 Batch_size = 16 #B
 dropout = 0.1
 learning_rate = 0.001
-MAX_EPOCH = 500
+MAX_EPOCH = 30
 ACCUMULATION_STEPS = 1
 
 class Trainer:

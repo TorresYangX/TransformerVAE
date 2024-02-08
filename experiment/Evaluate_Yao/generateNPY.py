@@ -3,10 +3,10 @@ import pandas as pd
 import argparse 
 import os
 
-lat1 = 39.6
-lat2 = 40.2
-lon1 = 116
-lon2 = 116.8
+lat1 = 41.04
+lat2 = 41.24
+lon1 = -8.7
+lon2 = -8.5
 grid_num = 50
 grid_size = max(lon2 - lon1, lat2 - lat1) / grid_num
 trajectory_length = 60
@@ -35,12 +35,12 @@ def generateNPY(targetFile, saveFilePath):
     
 def main(args):
     if args.MODEL == 'groundTruth':
-        targetData =  '../data/beijing/Experiment/groundTruth/groundTruth_8.csv'
-        saveFilePath = '../data/beijing/Experiment/groundTruth/OD_MATRIX.npy'
+        targetData =  '../data/Porto/groundTruth/groundTruth_12.csv'
+        saveFilePath = '../data/Porto/groundTruth/OD_MATRIX.npy'
         generateNPY(targetData, saveFilePath)
     else:
-        targetData =  '../results/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
-        saveFilePath = '../results/{}/KDTree{}/Evaluate_Yao/OD_MATRIX.npy'.format(args.MODEL, args.MODEL)
+        targetData =  '../results/Porto/{}/KDTree{}/EMD/retrievedTrajectories.csv'.format(args.MODEL, args.MODEL)
+        saveFilePath = '../results/Porto/{}/KDTree{}/Evaluate_Yao/OD_MATRIX.npy'.format(args.MODEL, args.MODEL)
         generateNPY(targetData, saveFilePath)
     
 if __name__ == '__main__':

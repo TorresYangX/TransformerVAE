@@ -1,16 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+dataset = 'Porto'
 
-AE =  '../results/AE/KDTreeAE/EMD/emd_.npy'
-VAE = '../results/VAE/KDTreeVAE/EMD/emd_.npy'
-t2vec = '../results/t2vec/KDTreeT2vec/EMD/emd_.npy'
-NVAE = '../results/NVAE/KDTreeNVAE/EMD/emd_.npy'
-Transformer = '../results/Transformer/KDTreeTransformer/EMD/emd_.npy'
-LCSS = '../results/LCSS/KDTreeLCSS/EMD/emd_.npy'
-EDR = '../results/EDR/KDTreeEDR/EMD/emd_.npy'
-EDwP = '../results/EDwP/KDTreeEDwP/EMD/emd_.npy'
-DTW = '../results/DTW/KDTreeDTW/EMD/emd_.npy'
+AE =  '../results/{}/AE/KDTreeAE/EMD/emd_.npy'.format(dataset)
+VAE = '../results/{}/VAE/KDTreeVAE/EMD/emd_.npy'.format(dataset)
+t2vec = '../results/{}/t2vec/KDTreeT2vec/EMD/emd_.npy'.format(dataset)
+NVAE = '../results/{}/NVAE/KDTreeNVAE/EMD/emd_.npy'.format(dataset)
+Transformer = '../results/{}/Transformer/KDTreeTransformer/EMD/emd_.npy'.format(dataset)
+LCSS = '../results/{}/LCSS/KDTreeLCSS/EMD/emd_.npy'.format(dataset)
+EDR = '../results/{}/EDR/KDTreeEDR/EMD/emd_.npy'.format(dataset)
+EDwP = '../results/{}/EDwP/KDTreeEDwP/EMD/emd_.npy'.format(dataset)
+DTW = '../results/{}/DTW/KDTreeDTW/EMD/emd_.npy'.format(dataset)
 
 def lineChart():
 
@@ -42,13 +43,13 @@ def lineChart():
 
     # Draw a line chart
     plt.plot(x, y21, 'b', linestyle='dotted', linewidth=1.5, label='AE')
-    # plt.plot(x, y22, 'r-', linewidth=1.5, label='VAE')
+    plt.plot(x, y22, 'r-', linewidth=1.5, label='VAE')
     plt.plot(x, y29, 'r.', linewidth=1, label='t2vec')
     plt.plot(x, y24, 'k-.', linewidth=1.5, label='Transformer')
     plt.plot(x, y25, 'g-.', linewidth=1.5, label='LCSS')
     plt.plot(x, y26, 'y-', linewidth=1.5, label='EDR')
     plt.plot(x, y27, 'c-.', linewidth=1.5, label='EDwP')
-    # plt.plot(x, y28, 'k-', linewidth=1.5, label='DTW')
+    plt.plot(x, y28, 'k-', linewidth=1.5, label='DTW')
     plt.plot(x, y23, 'r-', lw=2, label='NVAE')
     
 
@@ -65,7 +66,7 @@ def lineChart():
     plt.legend(prop={'size': 12, 'weight': 'bold'})
 
     #save figure
-    plt.savefig('../results/log(cityEMD).png')
+    plt.savefig('../results/{}/log(cityEMD).png'.format(dataset))
 
     # Display a figure.
     plt.show()

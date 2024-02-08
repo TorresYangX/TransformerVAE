@@ -2,15 +2,17 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-AE =  '../results/AE/KDTreeAE/Evaluate_Yao/MD_NMD.csv'
-VAE = '../results/VAE/KDTreeVAE/Evaluate_Yao/MD_NMD.csv'
-t2vec = '../results/t2vec/KDTreeT2vec/Evaluate_Yao/MD_NMD.csv'
-NVAE = '../results/NVAE/KDTreeNVAE/Evaluate_Yao/MD_NMD.csv'
-Transformer = '../results/Transformer/KDTreeTransformer/Evaluate_Yao/MD_NMD.csv'
-LCSS = '../results/LCSS/KDTreeLCSS/Evaluate_Yao/MD_NMD.csv'
-EDR = '../results/EDR/KDTreeEDR/Evaluate_Yao/MD_NMD.csv'
-EDwP = '../results/EDwP/KDTreeEDwP/Evaluate_Yao/MD_NMD.csv'
-DTW = '../results/DTW/KDTreeDTW/Evaluate_Yao/MD_NMD.csv'
+dataset = 'Porto'
+
+AE =  '../results/{}/AE/KDTreeAE/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+VAE = '../results/{}/VAE/KDTreeVAE/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+t2vec = '../results/{}/t2vec/KDTreeT2vec/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+NVAE = '../results/{}/NVAE/KDTreeNVAE/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+Transformer = '../results/{}/Transformer/KDTreeTransformer/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+LCSS = '../results/{}/LCSS/KDTreeLCSS/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+EDR = '../results/{}/EDR/KDTreeEDR/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+EDwP = '../results/{}/EDwP/KDTreeEDwP/Evaluate_Yao/MD_NMD.csv'.format(dataset)
+DTW = '../results/{}/DTW/KDTreeDTW/Evaluate_Yao/MD_NMD.csv'.format(dataset)
 
 AE_data = pd.read_csv(AE, header=None).to_numpy()
 VAE_data = pd.read_csv(VAE, header=None).to_numpy()
@@ -92,7 +94,7 @@ def matricbarChart():
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontweight='bold', fontsize=12)
     ax.legend(prop={'size': 12, 'weight': 'bold'})
-    plt.savefig('../results/Metric.png')
+    plt.savefig('../results/{}/Metric.png'.format(dataset))
     plt.show()
     
     
