@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-dataset = 'Porto'
+dataset = 'Geolife'
 
 AE =  '../results/{}/AE/KDTreeAE/Evaluate_Yao/MD_NMD.csv'.format(dataset)
 VAE = '../results/{}/VAE/KDTreeVAE/Evaluate_Yao/MD_NMD.csv'.format(dataset)

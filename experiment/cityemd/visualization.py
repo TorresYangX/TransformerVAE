@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-dataset = 'Porto'
+dataset = 'Geolife'
+# dataset = 'Porto'
 
 AE =  '../results/{}/AE/KDTreeAE/EMD/emd_.npy'.format(dataset)
-VAE = '../results/{}/VAE/KDTreeVAE/EMD/emd_.npy'.format(dataset)
+# VAE = '../results/{}/VAE/KDTreeVAE/EMD/emd_.npy'.format(dataset)
 t2vec = '../results/{}/t2vec/KDTreeT2vec/EMD/emd_.npy'.format(dataset)
 NVAE = '../results/{}/NVAE/KDTreeNVAE/EMD/emd_.npy'.format(dataset)
 Transformer = '../results/{}/Transformer/KDTreeTransformer/EMD/emd_.npy'.format(dataset)
@@ -16,7 +17,7 @@ DTW = '../results/{}/DTW/KDTreeDTW/EMD/emd_.npy'.format(dataset)
 def lineChart():
 
     AE_data = np.load(AE)
-    VAE_data = np.load(VAE)
+    # VAE_data = np.load(VAE)
     t2vec_data = np.load(t2vec)
     NVAE_data = np.load(NVAE)
     Transformer_data = np.load(Transformer)
@@ -31,7 +32,7 @@ def lineChart():
     x = np.arange(1, 60, 1)
 
     y21 = np.log(AE_data)
-    y22 = np.log(VAE_data)
+    # y22 = np.log(VAE_data)
     y23 = np.log(NVAE_data)
     y24 = np.log(Transformer_data)
     y25 = np.log(LCSS_data)
@@ -43,8 +44,8 @@ def lineChart():
 
     # Draw a line chart
     plt.plot(x, y21, 'b', linestyle='dotted', linewidth=1.5, label='AE')
-    plt.plot(x, y22, 'r-', linewidth=1.5, label='VAE')
-    plt.plot(x, y29, 'r.', linewidth=1, label='t2vec')
+    # plt.plot(x, y22, 'b-', linewidth=1.5, label='VAE')
+    plt.plot(x, y29, 'b.', linewidth=1, label='t2vec')
     plt.plot(x, y24, 'k-.', linewidth=1.5, label='Transformer')
     plt.plot(x, y25, 'g-.', linewidth=1.5, label='LCSS')
     plt.plot(x, y26, 'y-', linewidth=1.5, label='EDR')
@@ -54,16 +55,16 @@ def lineChart():
     
 
     # Set the x-axis label, bold font, font size 12
-    plt.xlabel('Steps', fontweight='bold', fontsize=12)
+    plt.xlabel('Steps', fontweight='bold', fontsize=15)
 
     # Set the y-axis label
-    plt.ylabel('log(cityEMD)', fontweight='bold', fontsize=12)
+    plt.ylabel('log(cityEMD)', fontweight='bold', fontsize=15)
 
     # Set a title of the current axes.
-    plt.title('log(cityEMD) of differernt models', fontweight='bold', fontsize=12)
+    plt.title('log(cityEMD) of differernt models', fontweight='bold', fontsize=15)
 
-    # show a legend on the plot, bold font, font size 12
-    plt.legend(prop={'size': 12, 'weight': 'bold'})
+    # show a legend on the plot, bold font, font size 12, the position is at the top left
+    plt.legend(loc='upper left', prop={'weight':'bold','size':13})
 
     #save figure
     plt.savefig('../results/{}/log(cityEMD).png'.format(dataset))
