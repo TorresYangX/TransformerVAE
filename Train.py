@@ -3,7 +3,7 @@ import torch
 import torch.optim as optim
 import os
 from tqdm import trange
-from NVAE import TransformerNvib
+from model.NVAE import TransformerNvib
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

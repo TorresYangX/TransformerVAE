@@ -3,34 +3,14 @@ import torch.nn as nn
 from nvib.denoising_attention import DenoisingMultiheadAttention
 from nvib.kl import kl_dirichlet, kl_gaussian
 from nvib.nvib_layer import Nvib
-
 import numpy as np
 import math
 import os
+from config import Config
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-
-grid_num = 50
-vocab_size = grid_num * grid_num +2 #V
-Batch_size = 16 #B
-embedding_dim = 16 # H
-PRIOR_MU = 0
-PRIOR_VAR = 1
-PRIOR_ALPHA = 1
-KAPPA = 1
-DELTA = 1
-KL_GAUSSIAN_LAMBDA = 0.001
-KL_DIRICHLET_LAMBDA = 1
-KL_ANNEALING_GAUSSIAN = "constant"
-KL_ANNEALING_DIRICHLET = "constant"
-
-
-dropout = 0.1
-learning_rate = 0.001
-MAX_EPOCH = 500
-ACCUMULATION_STEPS = 1
 
 
 def kl_annealing(start=0, stop=1, n_epoch=30, type="constant", n_cycle=4, ratio=0.5):
@@ -65,17 +45,17 @@ def kl_annealing(start=0, stop=1, n_epoch=30, type="constant", n_cycle=4, ratio=
     return L
 
 KL_ANNEALING_FACTOR_GAUSSIAN_LIST = kl_annealing(
-    n_epoch=MAX_EPOCH, type=KL_ANNEALING_GAUSSIAN
+    n_epoch=Config.MAX_EPOCH, type=Config.KL_ANNEALING_GAUSSIAN
 )
 KL_ANNEALING_FACTOR_DIRICHLET_LIST = kl_annealing(
-    n_epoch=MAX_EPOCH, type=KL_ANNEALING_DIRICHLET
+    n_epoch=Config.MAX_EPOCH, type=Config.KL_ANNEALING_DIRICHLET
 )
 
 
 class TokenEmbedding(nn.Module):
     def __init__(self):
         super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim)
+        self.embedding = nn.Embedding(num_embeddings=Config.vocab_size, embedding_dim=Config.embedding_dim)
 
     def forward(self, x):
         return self.embedding(x)
@@ -107,7 +87,7 @@ class PositionalEncoding(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(self):
         super(TransformerEncoder, self).__init__()
-        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=embedding_dim, 
+        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=Config.embedding_dim, 
                                                                   nhead=8, 
                                                                   dim_feedforward=2048, 
                                                                   dropout=0.1, 
@@ -122,7 +102,7 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(self):
         super(TransformerDecoder, self).__init__()
-        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=embedding_dim, 
+        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=Config.embedding_dim, 
                                                                   nhead=1, 
                                                                   dim_feedforward=2048, 
                                                                   dropout=0.1, 
@@ -131,7 +111,7 @@ class TransformerDecoder(nn.Module):
                                                                   device=device) 
         self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=1)
         for layer_num, layer in enumerate(self.TransformerDecoder.layers):
-            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=embedding_dim,
+            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=Config.embedding_dim,
                                                         num_heads=1,
                                                         dropout=0.1,
                                                         bias=False)
@@ -154,20 +134,20 @@ class TransformerNvib(nn.Module):
     def __init__(self):
         super(TransformerNvib, self).__init__()
         self.token_embedding = TokenEmbedding()
-        self.position_embedding = PositionalEncoding(embedding_dim)
+        self.position_embedding = PositionalEncoding(Config.embedding_dim)
         self.transformer_encoder = TransformerEncoder()
         self.nvib = Nvib(
-            size_in = embedding_dim,
-            size_out = embedding_dim,
-            prior_mu = PRIOR_MU,
-            prior_var = PRIOR_VAR,
-            prior_alpha = PRIOR_ALPHA,
-            kappa = KAPPA,
-            delta = DELTA,
+            size_in = Config.embedding_dim,
+            size_out = Config.embedding_dim,
+            prior_mu = Config.PRIOR_MU,
+            prior_var = Config.PRIOR_VAR,
+            prior_alpha = Config.PRIOR_ALPHA,
+            kappa = Config.KAPPA,
+            delta = Config.DELTA,
         )
         self.transformer_decoder = TransformerDecoder()
-        self.output_proj = nn.Linear(embedding_dim, vocab_size)
-        self.drop = nn.Dropout(dropout)
+        self.output_proj = nn.Linear(Config.embedding_dim, Config.vocab_size)
+        self.drop = nn.Dropout(Config.dropout)
 
     def encode(self,src, src_key_padding_mask):
         src = self.token_embedding(src.to(torch.int64).to(device)) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
@@ -204,17 +184,17 @@ class TransformerNvib(nn.Module):
 
         kl_loss_g = torch.mean(
             kl_gaussian(
-                prior_mu=PRIOR_MU,
-                prior_var=PRIOR_VAR,
-                kappa=KAPPA,
+                prior_mu=Config.PRIOR_MU,
+                prior_var=Config.PRIOR_VAR,
+                kappa=Config.KAPPA,
                 **kwargs
             )
         )
         kl_loss_d = torch.mean(
             kl_dirichlet(
-                prior_alpha=PRIOR_ALPHA,
-                delta=DELTA,
-                kappa=KAPPA,
+                prior_alpha=Config.PRIOR_ALPHA,
+                delta=Config.DELTA,
+                kappa=Config.KAPPA,
                 **kwargs
             )
         )
@@ -232,8 +212,8 @@ class TransformerNvib(nn.Module):
         KL_ANNEALING_FACTOR_DIRICHLET = KL_ANNEALING_FACTOR_DIRICHLET_LIST[epoch-1]
         return {
             "Loss": torch.mean(cross_entropy_loss)
-            + KL_GAUSSIAN_LAMBDA * KL_ANNEALING_FACTOR_GAUSSIAN * kl_loss_g
-            + KL_DIRICHLET_LAMBDA * KL_ANNEALING_FACTOR_DIRICHLET * kl_loss_d,
+            + Config.KL_GAUSSIAN_LAMBDA * KL_ANNEALING_FACTOR_GAUSSIAN * kl_loss_g
+            + Config.KL_DIRICHLET_LAMBDA * KL_ANNEALING_FACTOR_DIRICHLET * kl_loss_d,
             "CrossEntropy": torch.sum(cross_entropy_loss),
             "KLGaussian": kl_loss_g,
             "KLDirichlet": kl_loss_d,
