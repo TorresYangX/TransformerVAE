@@ -1,17 +1,10 @@
-'''
-input: ../data/Porto/Origin.csv
-output: ../data/Porto/rawTimeData/; ../data/Porto/gridData/
-time range: start: 2013-07-01 00:00:00; end: 2013-07-31 23:59:59
-origin trajectory min length: 60
-trajectory length: 60
-latitude range: 41.04-41.24
-longitude range: -8.7--8.5
-'''
 import sys
 sys.path.append('..')
-import time
 import logging
 logging.getLogger().setLevel(logging.INFO)
+
+
+import time
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -25,20 +18,20 @@ def inrange(lon, lat):
     return True
 
 def interpolate(x):
-    if len(x) == 60:
+    if len(x) == Config.traj_len:
         return x
     else:
         lon = [i[0] for i in x]
         lat = [i[1] for i in x]
-        tt = range(0, 60, 1)
+        tt = range(0, Config.traj_len, 1)
         lon = np.interp(tt, range(0, len(lon)), lon)
         lat = np.interp(tt, range(0, len(lat)), lat)
-        res = [[lon[i], lat[i]] for i in range(60)]
+        res = [[lon[i], lat[i]] for i in range(Config.traj_len)]
         return res
 
 def clean_and_output_data():
     _time = time.time()
-    dfraw = pd.read_csv(Config.root_dir + '/data/porto.csv') 
+    dfraw = pd.read_csv(Config.dataset_folder + 'porto.csv') 
     # Columns:
     # 'TRIP_ID', 'CALL_TYPE', 'ORIGIN_CALL', 'ORIGIN_STAND', 'TAXI_ID', 'TIMESTAMP', 'DAY_TYPE', 'MISSING_DATA', 'POLYLINE'
     dfraw = dfraw.rename(columns = {"POLYLINE": "wgs_seq"})
@@ -66,18 +59,68 @@ def clean_and_output_data():
     return
 
 def generate_lonlat_data():
+
+    def convert_multi_row(row):
+        return [[pd.to_datetime(row['timestamp']), coord[0], coord[1], row['TAXI_ID']] for coord in row['wgs_seq']]
+
     dfraw = pd.read_pickle(Config.dataset_file)
     dfraw = dfraw[['TAXI_ID', 'wgs_seq', 'timestamp']]
-    dfraw.wgs_seq = dfraw.wgs_seq.apply(literal_eval)
     # interp to 60 length using nn.interp
     dfraw['wgs_seq'] = dfraw['wgs_seq'].apply(lambda x: interpolate(x))
     dfraw = dfraw[dfraw['wgs_seq'].apply(lambda x: len(x) == 60)]
     dfraw = dfraw.reset_index(drop=True)
-    
-    dfraw.to_pickle(Config.dataset_file)
+    dfraw.to_pickle(Config.intepolation_file)
     logging.info('Interpolated. #traj={}'.format(dfraw.shape[0]))
     
+    # total traj data
+    output = dfraw.apply(convert_multi_row, axis=1).explode().tolist()
+    output = pd.DataFrame(output)
+    output.to_pickle(Config.lonlat_total_file)
+    logging.info('Saved lonlat_file. #traj={}'.format(output.shape[0]))
+    
+    # ground_data
+    ground_data = dfraw[(dfraw['timestamp'] >= Config.ground_data_timerange[0]) & (dfraw['timestamp'] <= Config.ground_data_timerange[1])]
+    __ground_data = ground_data.apply(convert_multi_row, axis=1).explode().tolist()
+    __ground_data = pd.DataFrame(__ground_data)
+    __ground_data.to_pickle(Config.lonlat_ground_file)
+    logging.info('Saved ground_data_file. #traj={}'.format(ground_data.shape[0]))
+    
+    # sample test_data
+    test_data = ground_data.sample(n=Config.test_data_num)
+    __test_data = test_data.apply(convert_multi_row, axis=1).explode().tolist()
+    __test_data = pd.DataFrame(__test_data)
+    __test_data.to_pickle(Config.lonlat_test_file)
+    logging.info('Saved test_data_file. #traj={}'.format(test_data.shape[0]))
+    
     return
+
+def generate_grid_data():
+    def convert_multi_row(row):
+        # convert to time, grid_id, taxi_id
+        return [[pd.to_datetime(row['timestamp']), int((coord[0] - Config.min_lon) / Config.grid_size) * Config.grid_num + int((coord[1] - Config.min_lat) / Config.grid_size), row['TAXI_ID']] for coord in row['wgs_seq']]
+    
+    dfraw = pd.read_pickle(Config.intepolation_file)
+    output = dfraw.apply(convert_multi_row, axis=1).explode().tolist()
+    output = pd.DataFrame(output)
+    output.to_pickle(Config.grid_total_file)
+    logging.info('Saved grid_total_file. #traj={}'.format(output.shape[0]))
+    
+    ground_data = dfraw[(dfraw['timestamp'] >= Config.ground_data_timerange[0]) & (dfraw['timestamp'] <= Config.ground_data_timerange[1])]
+    __ground_data = ground_data.apply(convert_multi_row, axis=1).explode().tolist()
+    __ground_data = pd.DataFrame(__ground_data)
+    __ground_data.to_pickle(Config.grid_ground_file)
+    logging.info('Saved grid_ground_file. #traj={}'.format(ground_data.shape[0]))
+    
+    test_data = ground_data.sample(n=Config.test_data_num)
+    __test_data = test_data.apply(convert_multi_row, axis=1).explode().tolist()
+    __test_data = pd.DataFrame(__test_data)
+    __test_data.to_pickle(Config.grid_test_file)
+    logging.info('Saved grid_test_file. #traj={}'.format(test_data.shape[0]))
+    
+    return
+    
+
+    
     
 
 

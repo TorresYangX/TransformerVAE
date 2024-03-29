@@ -24,6 +24,9 @@ class Config:
     root_dir = os.path.abspath(__file__)[:-10] # dont use os.getcwd()
     checkpoint_dir = root_dir + '/exp/snapshots'
     
+    traj_len = 60
+    grid_num = 50
+    
     # ================== DATASET ==================
     min_lon = 0.0
     min_lat = 0.0
@@ -33,10 +36,8 @@ class Config:
     min_traj_len = 20
     start_time = ''
     end_time = ''
-    grid_file = ''
-    lonlat_file = ''
-    
-    grid_num = 50
+    test_data_num = 0
+    ground_data_timerange = []
     
     
     # ================== NVAE ==================
@@ -70,18 +71,33 @@ class Config:
     def post_value_updates(cls):
         if 'porto' == cls.dataset:
             cls.dataset_prefix = 'porto'
-            cls.min_lon = -8.7005
-            cls.min_lat = 41.1001
-            cls.max_lon = -8.5192
-            cls.max_lat = 41.2086
+            cls.min_lon = -8.6705
+            cls.min_lat = 41.0801
+            cls.max_lon = -8.5205
+            cls.max_lat = 41.2301
             cls.start_time = Timestamp('2013-07-01 00:00:00')
             cls.end_time = Timestamp('2013-07-31 23:59:59')
+            cls.test_data_num = 50
+            cls.ground_data_timerange = [Timestamp('2013-07-15 00:00:00'), Timestamp('2013-07-15 23:59:59')]
+            
+            cls.grid_size = (cls.max_lat-cls.min_lat)/cls.grid_num
+            
         else:
             pass
         
-        cls.dataset_file = cls.root_dir + '/data/' + cls.dataset_prefix
-        cls.grid_file = cls.dataset_file + '_grid.pkl'
-        cls.lonlat_file = cls.dataset_file + '_lonlat.pkl'
+        cls.dataset_folder = cls.root_dir + '/data/' + cls.dataset_prefix + '/'
+        cls.grid_folder = cls.dataset_folder + 'grid/'
+        cls.lonlat_folder = cls.dataset_folder + 'lonlat/'
+        cls.dataset_file = cls.dataset_folder + cls.dataset_prefix + '.pkl'
+        cls.intepolation_file = cls.dataset_folder + cls.dataset_prefix + '_interpolation.pkl'
+        
+        cls.lonlat_total_file = cls.lonlat_folder + cls.dataset_prefix + '_total.pkl'
+        cls.lonlat_ground_file = cls.lonlat_folder + cls.dataset_prefix + '_ground_data.pkl'
+        cls.lonlat_test_file = cls.lonlat_folder + cls.dataset_prefix + '_test_data.pkl'
+        
+        cls.grid_total_file = cls.grid_folder + cls.dataset_prefix + '_total.pkl'
+        cls.grid_ground_file = cls.grid_folder + cls.dataset_prefix + '_ground_data.pkl'
+        cls.grid_test_file = cls.grid_folder + cls.dataset_prefix + '_test_data.pkl'
 
         set_seed(cls.seed)
          
