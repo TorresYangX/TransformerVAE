@@ -86,8 +86,9 @@ class Config:
             cls.dataset_prefix = 'beijing'
             cls.min_lon = 116.20
             cls.min_lat = 39.85
-            cls.max_lon = 116.60
-            cls.max_lat = 40.25
+            cls.max_lon = 116.40
+            cls.max_lat = 40.05
+            cls.min_traj_len = 60
             cls.test_data_num = 50
             cls.ground_data_timerange = [Timestamp('2008-02-04 00:00:00'), Timestamp('2008-02-04 23:59:59')]
             

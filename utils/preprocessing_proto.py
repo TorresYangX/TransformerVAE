@@ -22,10 +22,10 @@ def interpolate(x):
     else:
         lon = [i[0] for i in x]
         lat = [i[1] for i in x]
-        tt = range(0, Config.traj_len, 1)
-        lon = np.interp(tt, range(0, len(lon)), lon)
-        lat = np.interp(tt, range(0, len(lat)), lat)
-        res = [[lon[i], lat[i]] for i in range(Config.traj_len)]
+        tt = np.linspace(0, len(lon) - 1, Config.traj_len)
+        lon_interp = np.interp(tt, np.arange(len(lon)), lon)
+        lat_interp = np.interp(tt, np.arange(len(lat)), lat)
+        res = [[lon_interp[i], lat_interp[i]] for i in range(Config.traj_len)]
         return res
 
 def clean_and_output_data():
