@@ -87,9 +87,9 @@ class Config:
             cls.min_lon = 116.20
             cls.min_lat = 39.85
             cls.max_lon = 116.60
-            cls.max_lat = 40.05
+            cls.max_lat = 40.25
             cls.test_data_num = 50
-            cls.ground_data_timerange = [Timestamp('2008-04-17 00:00:00'), Timestamp('2008-04-17 23:59:59')]
+            cls.ground_data_timerange = [Timestamp('2008-02-04 00:00:00'), Timestamp('2008-02-04 23:59:59')]
             
             cls.grid_size = max((cls.max_lat-cls.min_lat), (cls.max_lon-cls.min_lon))/cls.grid_num
             

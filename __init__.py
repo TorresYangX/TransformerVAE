@@ -14,6 +14,6 @@ Config.to_str()
 # pkl2csv(Config.grid_test_file, Config.grid_test_file.replace('.pkl', '.csv'))
 # renumberTrajectories(Config.ground_data_file.replace('.pkl', '.csv'), Config.ground_data_file.replace('.pkl', '.csv'))
 
+preprocessing_beijing.prepare_csv()
 preprocessing_beijing.clean_and_output_data()
-# preprocessing_beijing.prepare_csv()
-
+# preprocessing_beijing.generate_lonlat_data()
