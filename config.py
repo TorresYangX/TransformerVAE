@@ -82,15 +82,17 @@ class Config:
             
             cls.grid_size = (cls.max_lat-cls.min_lat)/cls.grid_num
             
-        elif 'beijing' == cls.dataset:
-            cls.dataset_prefix = 'beijing'
+        elif 'geolife' == cls.dataset:
+            cls.dataset_prefix = 'geolife'
             cls.min_lon = 116.20
-            cls.min_lat = 39.85
-            cls.max_lon = 116.40
+            cls.min_lat = 39.75
+            cls.max_lon = 116.60
             cls.max_lat = 40.05
-            cls.min_traj_len = 60
+            cls.min_traj_len = 20
             cls.test_data_num = 50
-            cls.ground_data_timerange = [Timestamp('2008-02-04 00:00:00'), Timestamp('2008-02-04 23:59:59')]
+            cls.start_time = Timestamp('2008-01-01 00:00:00')
+            cls.end_time = Timestamp('2011-12-31 23:59:59')
+            cls.ground_data_timerange = [Timestamp('2009-05-01 00:00:00'), Timestamp('2009-05-31 23:59:59')]
             
             cls.grid_size = max((cls.max_lat-cls.min_lat), (cls.max_lon-cls.min_lon))/cls.grid_num
             
