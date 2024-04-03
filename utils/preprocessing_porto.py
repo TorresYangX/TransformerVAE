@@ -67,9 +67,6 @@ def generate_intepolation_data():
     logging.info('Interpolated. #traj={}'.format(dfraw.shape[0]))
 
 def generate_lonlat_data():
-
-    # def convert_multi_row(row):
-    #     return [[pd.to_datetime(row['timestamp']), coord[0], coord[1], row['TAXI_ID']] for coord in row['wgs_seq']]
     
     # total traj data
     _time = time.time()

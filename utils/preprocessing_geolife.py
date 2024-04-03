@@ -95,9 +95,6 @@ def generate_intepolation_data():
     
 def generate_lonlat_data():
     
-    # def convert_multi_row(row):
-    #     return [[pd.to_datetime(row['timestamp']), coord[0], coord[1], row['id']] for coord in row['wgs_seq']]
-    
     _time = time.time()
     dfraw = pd.read_pickle(Config.intepolation_file)
     
