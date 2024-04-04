@@ -1,14 +1,14 @@
-import torch
-import torch.nn as nn
-from nvib.denoising_attention import DenoisingMultiheadAttention
-from nvib.kl import kl_dirichlet, kl_gaussian
-from nvib.nvib_layer import Nvib
-import numpy as np
-import math
 import os
+import math
+import torch
+import numpy as np
+import torch.nn as nn
 from config import Config
+from nvib.nvib_layer import Nvib
+from nvib.kl import kl_dirichlet, kl_gaussian
+from nvib.denoising_attention import DenoisingMultiheadAttention
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = Config.device
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -88,13 +88,13 @@ class TransformerEncoder(nn.Module):
     def __init__(self):
         super(TransformerEncoder, self).__init__()
         self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=Config.embedding_dim, 
-                                                                  nhead=8, 
-                                                                  dim_feedforward=2048, 
-                                                                  dropout=0.1, 
-                                                                  activation='relu', 
-                                                                  batch_first=False, 
+                                                                  nhead=Config.nhead, 
+                                                                  dim_feedforward=Config.dim_forward, 
+                                                                  dropout=Config.dropout, 
+                                                                  activation=Config.activation, 
+                                                                  batch_first=Config.batch_first, 
                                                                   device=device) 
-        self.TransformerEncoder = nn.TransformerEncoder(self.TransformerEncoderLayer, num_layers=6)
+        self.TransformerEncoder = nn.TransformerEncoder(self.TransformerEncoderLayer, num_layers=Config.num_layers)
         
     def forward(self, src, src_key_padding_mask):
         return self.TransformerEncoder(src, src_key_padding_mask = src_key_padding_mask)
@@ -103,18 +103,18 @@ class TransformerDecoder(nn.Module):
     def __init__(self):
         super(TransformerDecoder, self).__init__()
         self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=Config.embedding_dim, 
-                                                                  nhead=1, 
-                                                                  dim_feedforward=2048, 
-                                                                  dropout=0.1, 
-                                                                  activation='relu', 
-                                                                  batch_first=False, 
+                                                                  nhead=Config.nhead, 
+                                                                  dim_feedforward=Config.dim_forward, 
+                                                                  dropout=Config.dropout, 
+                                                                  activation=Config.activation, 
+                                                                  batch_first=Config.batch_first, 
                                                                   device=device) 
-        self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=1)
-        for layer_num, layer in enumerate(self.TransformerDecoder.layers):
+        self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=Config.num_layers)
+        for _, layer in enumerate(self.TransformerDecoder.layers):
             layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=Config.embedding_dim,
-                                                        num_heads=1,
-                                                        dropout=0.1,
-                                                        bias=False)
+                                                               num_heads=Config.nhead,
+                                                               dropout=Config.dropout,
+                                                               bias=False)
 
     def forward(self, tgt, memory, tgt_mask, tgt_key_padding_mask, memory_key_padding_mask):
         return self.TransformerDecoder(tgt = tgt, 
