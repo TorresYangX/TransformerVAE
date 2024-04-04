@@ -19,17 +19,13 @@ def read_traj_dataset(file_path):
     l = trajs.shape[0]
     logging.info('[traj dataset] Number of trajectories: {}'.format(l))
     
-    train_idx = (int(l*0), int(l*0.8))
-    eval_idx = (int(l*0.8), int(l*0.9))
-    test_idx = (int(l*0.9), int(l*1.0))
+    dataset = TrajDataset(trajs)
     
-    _train = TrajDataset(trajs[train_idx[0]:train_idx[1]])
-    _eval = TrajDataset(trajs[eval_idx[0]: eval_idx[1]])
-    _test = TrajDataset(trajs[test_idx[0]: test_idx[1]])
+    logging.info('[Load traj dataset] END. @={:.0f}' \
+                .format(time.time() - _time, l))
+    return dataset
+
     
-    logging.info('[Load traj dataset] END. @={:.0f}, #={}({}/{}/{})' \
-                .format(time.time() - _time, l, len(_train), len(_eval), len(_test)))
-    return _train, _eval, _test
     
 class TrajDataset(Dataset):
     def __init__(self, data):
