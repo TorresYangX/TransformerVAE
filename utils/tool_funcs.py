@@ -1,8 +1,17 @@
-import logging
 import os
+import psutil
+import logging
 import numpy as np
 import pandas as pd
+from pynvml import *
 import matplotlib.pyplot as plt
+
+nvmlInit() # need initializztion here
+
+def mean(x):
+    if x == []:
+        return 0.0
+    return sum(x) / len(x)
 
 
 def constructTrainingData(filePath, BATCH_SIZE):
@@ -62,3 +71,18 @@ def plot_loss(train_loss_list, test_loss_list, args):
     else:
         plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
     plt.show()
+    
+    
+class GPUInfo:
+
+    _h = nvmlDeviceGetHandleByIndex(0)
+
+    @classmethod
+    def mem(cls):
+        info = nvmlDeviceGetMemoryInfo(cls._h)
+        return info.used // 1048576, info.total // 1048576 # in MB
+
+class RAMInfo:
+    @classmethod
+    def mem(cls):
+        return int(psutil.Process(os.getpid()).memory_info().rss / 1048576) # in MB
