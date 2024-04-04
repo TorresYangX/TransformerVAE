@@ -72,6 +72,11 @@ def plot_loss(train_loss_list, test_loss_list, args):
         plt.savefig('../SSM_KNN/{}/loss_figure.png'.format(args.MODEL))
     plt.show()
     
+
+def pkl2csv(pkl_file, csv_file):
+    df = pd.read_pickle(pkl_file)
+    df.to_csv(csv_file, index=False, header=None)
+    
     
 class GPUInfo:
 

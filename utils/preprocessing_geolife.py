@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from config import Config
+from dataset_config import DatasetConfig as Config
 from ast import literal_eval
 
 

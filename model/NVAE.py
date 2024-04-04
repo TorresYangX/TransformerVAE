@@ -3,12 +3,12 @@ import math
 import torch
 import numpy as np
 import torch.nn as nn
-from config import Config
+from model_config import ModelConfig
 from nvib.nvib_layer import Nvib
 from nvib.kl import kl_dirichlet, kl_gaussian
 from nvib.denoising_attention import DenoisingMultiheadAttention
 
-device = Config.device
+device = ModelConfig.device
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -45,17 +45,17 @@ def kl_annealing(start=0, stop=1, n_epoch=30, type="constant", n_cycle=4, ratio=
     return L
 
 KL_ANNEALING_FACTOR_GAUSSIAN_LIST = kl_annealing(
-    n_epoch=Config.MAX_EPOCH, type=Config.KL_ANNEALING_GAUSSIAN
+    n_epoch=ModelConfig.NVAE.MAX_EPOCH, type=ModelConfig.NVAE.KL_ANNEALING_GAUSSIAN
 )
 KL_ANNEALING_FACTOR_DIRICHLET_LIST = kl_annealing(
-    n_epoch=Config.MAX_EPOCH, type=Config.KL_ANNEALING_DIRICHLET
+    n_epoch=ModelConfig.NVAE.MAX_EPOCH, type=ModelConfig.NVAE.KL_ANNEALING_DIRICHLET
 )
 
 
 class TokenEmbedding(nn.Module):
     def __init__(self):
         super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(num_embeddings=Config.vocab_size, embedding_dim=Config.embedding_dim)
+        self.embedding = nn.Embedding(num_embeddings=ModelConfig.NVAE.vocab_size, embedding_dim=ModelConfig.NVAE.embedding_dim)
 
     def forward(self, x):
         return self.embedding(x)
@@ -87,14 +87,14 @@ class PositionalEncoding(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(self):
         super(TransformerEncoder, self).__init__()
-        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=Config.embedding_dim, 
-                                                                  nhead=Config.nhead, 
-                                                                  dim_feedforward=Config.dim_forward, 
-                                                                  dropout=Config.dropout, 
-                                                                  activation=Config.activation, 
-                                                                  batch_first=Config.batch_first, 
+        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=ModelConfig.NVAE.embedding_dim, 
+                                                                  nhead=ModelConfig.NVAE.nhead, 
+                                                                  dim_feedforward=ModelConfig.NVAE.dim_forward, 
+                                                                  dropout=ModelConfig.NVAE.dropout, 
+                                                                  activation=ModelConfig.NVAE.activation, 
+                                                                  batch_first=ModelConfig.NVAE.batch_first, 
                                                                   device=device) 
-        self.TransformerEncoder = nn.TransformerEncoder(self.TransformerEncoderLayer, num_layers=Config.num_layers)
+        self.TransformerEncoder = nn.TransformerEncoder(self.TransformerEncoderLayer, num_layers=ModelConfig.NVAE.num_layers)
         
     def forward(self, src, src_key_padding_mask):
         return self.TransformerEncoder(src, src_key_padding_mask = src_key_padding_mask)
@@ -102,18 +102,18 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(self):
         super(TransformerDecoder, self).__init__()
-        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=Config.embedding_dim, 
-                                                                  nhead=Config.nhead, 
-                                                                  dim_feedforward=Config.dim_forward, 
-                                                                  dropout=Config.dropout, 
-                                                                  activation=Config.activation, 
-                                                                  batch_first=Config.batch_first, 
+        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=ModelConfig.NVAE.embedding_dim, 
+                                                                  nhead=ModelConfig.NVAE.nhead, 
+                                                                  dim_feedforward=ModelConfig.NVAE.dim_forward, 
+                                                                  dropout=ModelConfig.NVAE.dropout, 
+                                                                  activation=ModelConfig.NVAE.activation, 
+                                                                  batch_first=ModelConfig.NVAE.batch_first, 
                                                                   device=device) 
-        self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=Config.num_layers)
+        self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=ModelConfig.NVAE.num_layers)
         for _, layer in enumerate(self.TransformerDecoder.layers):
-            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=Config.embedding_dim,
-                                                               num_heads=Config.nhead,
-                                                               dropout=Config.dropout,
+            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=ModelConfig.NVAE.embedding_dim,
+                                                               num_heads=ModelConfig.NVAE.nhead,
+                                                               dropout=ModelConfig.NVAE.dropout,
                                                                bias=False)
 
     def forward(self, tgt, memory, tgt_mask, tgt_key_padding_mask, memory_key_padding_mask):
@@ -134,20 +134,20 @@ class TransformerNvib(nn.Module):
     def __init__(self):
         super(TransformerNvib, self).__init__()
         self.token_embedding = TokenEmbedding()
-        self.position_embedding = PositionalEncoding(Config.embedding_dim)
+        self.position_embedding = PositionalEncoding(ModelConfig.NVAE.embedding_dim)
         self.transformer_encoder = TransformerEncoder()
         self.nvib = Nvib(
-            size_in = Config.embedding_dim,
-            size_out = Config.embedding_dim,
-            prior_mu = Config.PRIOR_MU,
-            prior_var = Config.PRIOR_VAR,
-            prior_alpha = Config.PRIOR_ALPHA,
-            kappa = Config.KAPPA,
-            delta = Config.DELTA,
+            size_in = ModelConfig.NVAE.embedding_dim,
+            size_out = ModelConfig.NVAE.embedding_dim,
+            prior_mu = ModelConfig.NVAE.PRIOR_MU,
+            prior_var = ModelConfig.NVAE.PRIOR_VAR,
+            prior_alpha = ModelConfig.NVAE.PRIOR_ALPHA,
+            kappa = ModelConfig.NVAE.KAPPA,
+            delta = ModelConfig.NVAE.DELTA,
         )
         self.transformer_decoder = TransformerDecoder()
-        self.output_proj = nn.Linear(Config.embedding_dim, Config.vocab_size)
-        self.drop = nn.Dropout(Config.dropout)
+        self.output_proj = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.vocab_size)
+        self.drop = nn.Dropout(ModelConfig.NVAE.dropout)
 
     def encode(self,src, src_key_padding_mask):
         src = self.token_embedding(src.to(torch.int64).to(device)) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
@@ -184,17 +184,17 @@ class TransformerNvib(nn.Module):
 
         kl_loss_g = torch.mean(
             kl_gaussian(
-                prior_mu=Config.PRIOR_MU,
-                prior_var=Config.PRIOR_VAR,
-                kappa=Config.KAPPA,
+                prior_mu=ModelConfig.NVAE.PRIOR_MU,
+                prior_var=ModelConfig.NVAE.PRIOR_VAR,
+                kappa=ModelConfig.NVAE.KAPPA,
                 **kwargs
             )
         )
         kl_loss_d = torch.mean(
             kl_dirichlet(
-                prior_alpha=Config.PRIOR_ALPHA,
-                delta=Config.DELTA,
-                kappa=Config.KAPPA,
+                prior_alpha=ModelConfig.NVAE.PRIOR_ALPHA,
+                delta=ModelConfig.NVAE.DELTA,
+                kappa=ModelConfig.NVAE.KAPPA,
                 **kwargs
             )
         )
@@ -212,8 +212,8 @@ class TransformerNvib(nn.Module):
         KL_ANNEALING_FACTOR_DIRICHLET = KL_ANNEALING_FACTOR_DIRICHLET_LIST[epoch-1]
         return {
             "Loss": torch.mean(cross_entropy_loss)
-            + Config.KL_GAUSSIAN_LAMBDA * KL_ANNEALING_FACTOR_GAUSSIAN * kl_loss_g
-            + Config.KL_DIRICHLET_LAMBDA * KL_ANNEALING_FACTOR_DIRICHLET * kl_loss_d,
+            + ModelConfig.NVAE.KL_GAUSSIAN_LAMBDA * KL_ANNEALING_FACTOR_GAUSSIAN * kl_loss_g
+            + ModelConfig.NVAE.KL_DIRICHLET_LAMBDA * KL_ANNEALING_FACTOR_DIRICHLET * kl_loss_d,
             "CrossEntropy": torch.sum(cross_entropy_loss),
             "KLGaussian": kl_loss_g,
             "KLDirichlet": kl_loss_d,

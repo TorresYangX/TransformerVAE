@@ -7,7 +7,7 @@ logging.getLogger().setLevel(logging.INFO)
 import time
 import numpy as np
 import pandas as pd
-from config import Config
+from dataset_config import DatasetConfig as Config
 from ast import literal_eval
 
 def inrange(lon, lat):

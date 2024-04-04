@@ -2,10 +2,11 @@ import os
 import time
 import torch
 import numpy as np
-from config import Config
 from utils import tool_funcs
 from datetime import datetime
+from model_config import ModelConfig
 from model.NVAE import TransformerNvib
+from dataset_config import DatasetConfig
 from utils.dataloader import read_traj_dataset
 from torch.utils.data.dataloader import DataLoader
 
@@ -18,22 +19,25 @@ class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
         
-        self.model = TransformerNvib().to(Config.device)
+        self.model = TransformerNvib().to(ModelConfig.device)
         
-        self.eos_tensor = torch.full((Config.Batch_size, 1), Config.eos)
-        self.sos_tensor = torch.full((Config.Batch_size, 1), Config.sos)
+        self.eos_tensor = torch.full((ModelConfig.NVAE.Batch_size, 1), ModelConfig.NVAE.eos)
+        self.sos_tensor = torch.full((ModelConfig.NVAE.Batch_size, 1), ModelConfig.NVAE.sos)
         
-        self.src_key_padding_mask = torch.zeros((Config.Batch_size, Config.traj_len + 1), dtype = torch.bool).to(Config.device)
-        self.tgt_key_padding_mask = torch.zeros((Config.Batch_size, Config.traj_len + 1), dtype = torch.bool).to(Config.device)
+        self.src_key_padding_mask = torch.zeros((ModelConfig.NVAE.Batch_size, ModelConfig.NVAE.traj_len + 1), 
+                                                dtype = torch.bool).to(ModelConfig.device)
+        self.tgt_key_padding_mask = torch.zeros((ModelConfig.NVAE.Batch_size, ModelConfig.NVAE.traj_len + 1), 
+                                                dtype = torch.bool).to(ModelConfig.device)
 
-        self.checkpoint_file = '{}/{}_NVAE_best.pt'.format(Config.checkpoint_dir, Config.dataset)
+        self.checkpoint_file = '{}/{}_NVAE_best.pt'.format(ModelConfig.NVAE.checkpoint_dir, 
+                                                           DatasetConfig.dataset)
 
         
     def train(self):
         training_starttime = time.time()
-        train_dataset = read_traj_dataset(Config.grid_total_file)
+        train_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
         train_dataloader = DataLoader(train_dataset, 
-                                            batch_size = Config.Batch_size, 
+                                            batch_size = ModelConfig.NVAE.Batch_size, 
                                             shuffle = False, 
                                             num_workers = 0, 
                                             drop_last = True)
@@ -42,15 +46,16 @@ class Trainer:
         logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
         torch.autograd.set_detect_anomaly(True)
         
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = Config.learning_rate, weight_decay = 0.0001)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = Config.training_lr_degrade_step, gamma = Config.training_lr_degrade_gamma)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.NVAE.learning_rate, weight_decay = 0.0001)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = ModelConfig.NVAE.training_lr_degrade_step, 
+                                                    gamma = ModelConfig.NVAE.training_lr_degrade_gamma)
 
         best_loss_train = 100000
         best_epoch = 0
         bad_counter = 0
-        bad_patience = Config.training_bad_patience
+        bad_patience = ModelConfig.NVAE.training_bad_patience
         
-        for i_ep in range(Config.MAX_EPOCH):
+        for i_ep in range(ModelConfig.NVAE.MAX_EPOCH):
             _time_ep = time.time()
             loss_ep = []
             train_gpu = []
@@ -61,16 +66,16 @@ class Trainer:
             _time_batch_start = time.time()
             for i_batch, batch in enumerate(train_dataloader):
                 optimizer.zero_grad()
-                batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(Config.device)
-                batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(Config.device)
+                batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
+                batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
                 
                 train_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
                 train_loss = self.model.loss(**train_dict, targets = batch_tgt, epoch = i_ep)
                 
-                (train_loss['Loss'] / Config.ACCUMULATION_STEPS).backward()
+                (train_loss['Loss'] / ModelConfig.NVAE.ACCUMULATION_STEPS).backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
                 
-                if ((i_batch + 1) % Config.ACCUMULATION_STEPS == 0) or (i_batch + 1 == len(train_dataloader)):
+                if ((i_batch + 1) % ModelConfig.NVAE.ACCUMULATION_STEPS == 0) or (i_batch + 1 == len(train_dataloader)):
                     optimizer.step()
                     optimizer.zero_grad()
                 loss_ep.append(train_loss['Loss'].item())
@@ -101,7 +106,7 @@ class Trainer:
             else:
                 bad_counter += 1
             
-            if bad_counter == bad_patience or (i_ep + 1) == Config.MAX_EPOCH:
+            if bad_counter == bad_patience or (i_ep + 1) == ModelConfig.NVAE.MAX_EPOCH:
                 logging.info("[Training] END! @={}, best_epoch={}, best_loss_train={:.6f}" \
                             .format(time.time()-training_starttime, best_epoch, best_loss_train))
                 break
@@ -118,23 +123,23 @@ class Trainer:
         n. varying db size, downsampling rates, and distort rates
         """
         if tp == 'total':
-            total_dataset = read_traj_dataset(Config.grid_total_file)
+            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
             dataloader = DataLoader(total_dataset,
-                                    batch_size = Config.Batch_size,
+                                    batch_size = ModelConfig.NVAE.Batch_size,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
         elif tp == 'ground':
-            ground_dataset = read_traj_dataset(Config.grid_ground_file)
+            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
             dataloader = DataLoader(ground_dataset,
-                                    batch_size = Config.Batch_size,
+                                    batch_size = ModelConfig.NVAE.Batch_size,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
         elif tp == 'test':
-            test_dataset = read_traj_dataset(Config.grid_test_file)
+            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
             dataloader = DataLoader(test_dataset,
-                                    batch_size = Config.Batch_size,
+                                    batch_size = ModelConfig.NVAE.Batch_size,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
@@ -154,29 +159,29 @@ class Trainer:
         }
 
         for i_batch, batch in enumerate(dataloader):
-            batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(Config.device)
-            batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(Config.device)
+            batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
+            batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
             
             enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
             mu = enc_dict['mu'].mean(dim = 0, keepdim = True)
             logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True)
-            pi = enc_dict['pi'].repeat(1,1,Config.embedding_dim).mean(dim = 0, keepdim = True)
-            alpha = enc_dict['alpha'].repeat(1,1,Config.embedding_dim).mean(dim = 0, keepdim = True)
+            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
+            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
             
             index['mu'].append(mu)
             index['logvar'].append(logvar)
             index['pi'].append(pi)
             index['alpha'].append(alpha)
             
-        index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, Config.embedding_dim)
-        index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, Config.embedding_dim)
-        index['pi'] = torch.cat(index['pi'], dim = 0).view(-1, Config.embedding_dim)
-        index['alpha'] = torch.cat(index['alpha'], dim = 0).view(-1, Config.embedding_dim)
+        index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+        index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+        index['pi'] = torch.cat(index['pi'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+        index['alpha'] = torch.cat(index['alpha'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         
-        np.savetxt(Config.index_dir + '/mu/{}_mu.csv'.format(tp), index['mu'].cpu().detach().numpy())
-        np.savetxt(Config.index_dir + '/logvar/{}_sigma.csv'.format(tp), index['logvar'].cpu().detach().numpy())
-        np.savetxt(Config.index_dir + '/pi/{}_pi.csv'.format(tp), index['pi'].cpu().detach().numpy())
-        np.savetxt(Config.index_dir + '/alpha/{}_alpha.csv'.format(tp), index['alpha'].cpu().detach().numpy())
+        np.savetxt(ModelConfig.NVAE.index_dir + '/mu/{}_mu.csv'.format(tp), index['mu'].cpu().detach().numpy())
+        np.savetxt(ModelConfig.NVAE.index_dir + '/logvar/{}_sigma.csv'.format(tp), index['logvar'].cpu().detach().numpy())
+        np.savetxt(ModelConfig.NVAE.index_dir + '/pi/{}_pi.csv'.format(tp), index['pi'].cpu().detach().numpy())
+        np.savetxt(ModelConfig.NVAE.index_dir + '/alpha/{}_alpha.csv'.format(tp), index['alpha'].cpu().detach().numpy())
     
         return
 
@@ -190,73 +195,13 @@ class Trainer:
     def load_checkpoint(self):
         checkpoint = torch.load(self.checkpoint_file)
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.model.to(Config.device)
+        self.model.to(ModelConfig.device)
         return
     
     def make_indexfolder(self):
-        if not os.path.exists(Config.index_dir+'/mu'):
-            os.mkdir(Config.index_dir+'/mu')
-            os.mkdir(Config.index_dir+'/logvar')
-            os.mkdir(Config.index_dir+'/pi')
-            os.mkdir(Config.index_dir+'/alpha')
+        if not os.path.exists(ModelConfig.NVAE.index_dir+'/mu'):
+            os.mkdir(ModelConfig.NVAE.index_dir+'/mu')
+            os.mkdir(ModelConfig.NVAE.index_dir+'/logvar')
+            os.mkdir(ModelConfig.NVAE.index_dir+'/pi')
+            os.mkdir(ModelConfig.NVAE.index_dir+'/alpha')
         return
-    
-    # def __init__(self, model, optimizer, train_loader, test_loader, trajectory_length, grid_num, epoch, ACCUMULATION_STEPS):
-    #     self.model = model
-    #     self.optimizer = optimizer
-    #     self.train_loader = train_loader
-    #     self.test_loader = test_loader
-    #     self.trajectory_length = trajectory_length
-    #     self.grid_num = grid_num
-    #     self.epoch = epoch
-    #     self.ACCUMULATION_STEPS = ACCUMULATION_STEPS
-    
-    # def training(self):
-    #     train_losses_value = 0
-    #     for idx, x in enumerate(self.train_loader):
-    #         x = x[0].transpose(0,1).to(device)
-    #         eos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num).to(device)
-    #         sos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num+1).to(device)
-    #         src = torch.cat([x, eos], dim=0)
-    #         tgt = torch.cat([sos, x], dim=0)
-
-    #         src_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
-    #         tgt_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
-
-    #         train_outputs_dict = self.model(
-    #             src,
-    #             tgt,
-    #             src_key_padding_mask=src_key_padding_mask,
-    #             tgt_key_padding_mask=tgt_key_padding_mask,
-    #         )
-    #         train_losses = self.model.loss(**train_outputs_dict, targets=tgt, epoch=self.epoch)
-    #         (train_losses["Loss"] / self.ACCUMULATION_STEPS).backward()
-    #         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
-    #         if ((idx + 1) % self.ACCUMULATION_STEPS == 0) or (idx + 1 == len(self.train_loader)):
-    #             self.optimizer.step()
-    #             self.optimizer.zero_grad()
-    #         train_losses_value += train_losses["Loss"].item()
-    #     return train_losses_value / len(self.train_loader.dataset)
-
-    # def evaluation(self):
-    #     test_losses_value = 0
-    #     for _, x in enumerate(self.test_loader):
-    #         with torch.no_grad():
-    #             x = x[0].transpose(0,1).to(device)
-    #             eos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num).to(device)
-    #             sos = torch.full((1, x.shape[1]), self.grid_num*self.grid_num+1).to(device)
-    #             src = torch.cat([x, eos], dim=0)
-    #             tgt = torch.cat([sos, x], dim=0)
-
-    #             src_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
-    #             tgt_key_padding_mask = torch.zeros((x.shape[1], self.trajectory_length + 1), dtype=torch.bool).to(device)
-
-    #             test_outputs_dict = self.model(
-    #                 src,
-    #                 tgt,
-    #                 src_key_padding_mask=src_key_padding_mask,
-    #                 tgt_key_padding_mask=tgt_key_padding_mask,
-    #             )
-    #             test_losses = self.model.loss(**test_outputs_dict, targets=tgt, epoch=self.epoch)
-    #             test_losses_value += test_losses["Loss"].item()
-    #     return test_losses_value / len(self.test_loader.dataset)

@@ -3,7 +3,6 @@ import time
 import torch
 import pandas as pd
 import pickle as pickle
-from config import Config
 from torch.utils.data import Dataset
 
 import logging
