@@ -105,6 +105,7 @@ def generate_grid_data():
     dfraw = pd.read_pickle(Config.lonlat_total_file)
     dfraw = dfraw[['TAXI_ID', 'wgs_seq', 'timestamp']]
     dfraw['grid_seq'] = dfraw.apply(lonlat2grid, axis=1)
+    dfraw = dfraw.reset_index(drop=True)
     dfraw.to_pickle(Config.grid_total_file)
     logging.info('Saved grid_total_file. #traj={}'.format(dfraw.shape[0]))
     
@@ -112,6 +113,7 @@ def generate_grid_data():
     ground_data  = pd.read_pickle(Config.lonlat_ground_file)
     ground_data = ground_data[['TAXI_ID', 'wgs_seq', 'timestamp']]
     ground_data['grid_seq'] = ground_data.apply(lonlat2grid, axis=1)
+    ground_data =  ground_data.reset_index(drop=True)
     ground_data.to_pickle(Config.grid_ground_file)
     logging.info('Saved grid_ground_file. #traj={}'.format(ground_data.shape[0]))
     
@@ -119,12 +121,19 @@ def generate_grid_data():
     test_data = pd.read_pickle(Config.lonlat_test_file)
     test_data = test_data[['TAXI_ID', 'wgs_seq', 'timestamp']]
     test_data['grid_seq'] = test_data.apply(lonlat2grid, axis=1)
+    test_data = test_data.reset_index(drop=True)
     test_data.to_pickle(Config.grid_test_file)
     logging.info('Saved grid_test_file. #traj={}'.format(test_data.shape[0]))
     
     logging.info('Generate grid data end. @={:.0f}'.format(time.time() - _time))
     
     return
+
+def generate_downsample_data():
+    
+    def _downsample_dataset(rate):
+        pass
+        
 
             
         
