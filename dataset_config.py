@@ -1,33 +1,28 @@
 import os
-import random
 import torch
-import numpy
 from pandas import Timestamp
 
-def set_seed(seed = -1):
-    if seed == -1:
-        return
-    random.seed(seed)
-    numpy.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-
-class Config:
-    debug = True
-    dumpfile_uniqueid = ''
-    seed = 2000
-    # device = torch.device("cpu")
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    root_dir = os.path.abspath(__file__)[:-10] # dont use os.getcwd()
-    checkpoint_dir = root_dir + '/exp/snapshots'
+class DatasetConfig:
     
-    traj_len = 60
-    grid_num = 50
+    root_dir = os.path.abspath(__file__)[:-18]
     
-    # ================== DATASET ==================
+    dataset = 'porto'
+    
+    dataset_folder = ''
+    grid_folder = ''
+    lonlat_folder = ''
+    
+    dataset_file = ''
+    intepolation_file = ''
+    
+    lonlat_total_file = ''
+    lonlat_ground_file = ''
+    lonlat_test_file = ''
+    
+    grid_total_file = ''
+    grid_ground_file = ''
+    grid_test_file = ''
+    
     min_lon = 0.0
     min_lat = 0.0
     max_lon = 0.0
@@ -38,35 +33,18 @@ class Config:
     end_time = ''
     test_data_num = 0
     ground_data_timerange = []
-    
-    
-    # ================== NVAE ==================
-    vocab_size = grid_num * grid_num + 2 #V
-    Batch_size = 16 #B
-    embedding_dim = 16 # H
-    PRIOR_MU = 0
-    PRIOR_VAR = 1
-    PRIOR_ALPHA = 1
-    KAPPA = 1
-    DELTA = 1
-    KL_GAUSSIAN_LAMBDA = 0.001
-    KL_DIRICHLET_LAMBDA = 1
-    KL_ANNEALING_GAUSSIAN = "constant"
-    KL_ANNEALING_DIRICHLET = "constant"
-    dropout = 0.1
-    learning_rate = 0.001
-    MAX_EPOCH = 500
-    ACCUMULATION_STEPS = 1
+    grid_size = 0.0
+    grid_num = 50
     
     @classmethod
     def update(cls, dic: dict):
         for k, v in dic.items():
             if k in cls.__dict__:
-                assert type(getattr(Config, k)) == type(v)
-            setattr(Config, k, v)
+                assert type(getattr(DatasetConfig, k)) == type(v)
+            setattr(DatasetConfig, k, v)
         cls.post_value_updates()
-
-
+        
+    
     @classmethod
     def post_value_updates(cls):
         if 'porto' == cls.dataset:
@@ -80,7 +58,7 @@ class Config:
             cls.test_data_num = 50
             cls.ground_data_timerange = [Timestamp('2013-07-15 00:00:00'), Timestamp('2013-07-15 23:59:59')]
             
-            cls.grid_size = (cls.max_lat-cls.min_lat)/cls.grid_num
+            cls.grid_size = max((cls.max_lat-cls.min_lat), (cls.max_lon-cls.min_lon))/cls.grid_num
             
         elif 'geolife' == cls.dataset:
             cls.dataset_prefix = 'geolife'
@@ -112,8 +90,6 @@ class Config:
         cls.grid_total_file = cls.grid_folder + cls.dataset_prefix + '_total.pkl'
         cls.grid_ground_file = cls.grid_folder + cls.dataset_prefix + '_ground_data.pkl'
         cls.grid_test_file = cls.grid_folder + cls.dataset_prefix + '_test_data.pkl'
-
-        set_seed(cls.seed)
          
     @classmethod
     def to_str(cls): # __str__, self
