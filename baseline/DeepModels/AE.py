@@ -55,7 +55,7 @@ class AE(nn.Module):
         x_hat = self.softmax(x_hat)
         return x_hat
     
-    def loss_fn(self, logits, targets):
+    def loss_fn(self, logits, targets, prob):
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
         targets = torch.flatten(targets)
         logits = torch.flatten(logits, start_dim=0, end_dim=1)
@@ -112,11 +112,10 @@ class AE_Trainer:
             
             _time_batch_start = time.time()
             for i_batch, batch in enumerate(train_dataloader):
-                print(i_batch)
                 optimizer.zero_grad()
                 
                 train_dict = self.model(batch.to(ModelConfig.device))
-                train_loss = self.model.loss_fn(train_dict['logits'], batch.to(ModelConfig.device))
+                train_loss = self.model.loss_fn(targets=batch.to(ModelConfig.device), **train_dict)
                 
                 train_loss['Loss'].backward()
                 optimizer.step()
