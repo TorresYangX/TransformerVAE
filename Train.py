@@ -5,6 +5,7 @@ from model_config import ModelConfig
 from model.NVAE_trainer import Trainer
 from dataset_config import DatasetConfig
 from baseline.DeepModels.AE import AE_Trainer
+from baseline.DeepModels.VAE import VAE_Trainer
 
 
 logging.getLogger().setLevel(logging.INFO)
@@ -31,6 +32,7 @@ if __name__ == '__main__':
     model_mapping = {
         'NVAE': {'trainer': Trainer, 'config': ModelConfig.NVAE},
         'AE': {'trainer': AE_Trainer, 'config': ModelConfig.AE},
+        'VAE': {'trainer': VAE_Trainer, 'config': ModelConfig.VAE},
     }
     if args.model not in model_mapping:
         raise ValueError('model not found')
