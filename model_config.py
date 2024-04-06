@@ -10,6 +10,7 @@ class ModelConfig:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     class NVAE:
+        model = 'NVAE'
         
         traj_len = 60
         grid_num = 50
@@ -44,5 +45,39 @@ class ModelConfig:
         MAX_EPOCH = 500
         ACCUMULATION_STEPS = 1
         
+        @classmethod
+        def to_str(cls): # __str__, self
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
     class AE:
-        pass
+        model = 'AE'
+        
+        embedding_dim = 64
+        hidden_dim = 32
+        latent_dim = 16
+        traj_len = 60
+        grid_num = 50
+        vocab_size = grid_num * grid_num + 2
+        dropout = 0.1
+        BATCH_SIZE = 16
+        
+        learning_rate = 1e-7
+        training_bad_patience = 10
+        MAX_EPOCH = 500
+        checkpoint_dir = 'exp/{}/AE'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls): # __str__, self
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+        
