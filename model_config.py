@@ -81,3 +81,29 @@ class ModelConfig:
             return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
         
         
+    class VAE:
+        model = 'VAE'
+        
+        embedding_dim = 64
+        hidden_dim = 32
+        latent_dim = 16
+        traj_len = 60
+        grid_num = 50
+        vocab_size = grid_num * grid_num + 2
+        BATCH_SIZE = 16
+        
+        learning_rate = 1e-7
+        training_bad_patience = 10
+        MAX_EPOCH = 500
+        checkpoint_dir = 'exp/{}/VAE'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls): # __str__, self
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+        
