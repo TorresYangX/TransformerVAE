@@ -37,10 +37,10 @@ class Trainer:
         training_starttime = time.time()
         train_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
         train_dataloader = DataLoader(train_dataset, 
-                                            batch_size = ModelConfig.NVAE.Batch_size, 
-                                            shuffle = False, 
-                                            num_workers = 0, 
-                                            drop_last = True)
+                                        batch_size = ModelConfig.NVAE.Batch_size, 
+                                        shuffle = False, 
+                                        num_workers = 0, 
+                                        drop_last = True)
         
         training_gpu_usage = training_ram_usage = 0.0
         logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
