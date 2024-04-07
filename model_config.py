@@ -107,3 +107,33 @@ class ModelConfig:
             return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
         
         
+    class Transformer:
+        model = 'Transformer'
+        
+        embedding_dim = 16
+        NUM_HEADS = 8
+        NUM_LAYERS = 6
+        DIM_FORWARD = 512
+        dropout = 0.1
+        traj_len = 60
+        grid_num = 50
+        vocab_size = grid_num * grid_num + 2
+        sos = grid_num * grid_num
+        eos = grid_num * grid_num + 1
+        Batch_size = 16
+        
+        learning_rate = 1e-7
+        training_bad_patience = 10
+        MAX_EPOCH = 500
+        checkpoint_dir = 'exp/{}/Transformer'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls): # __str__, self
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+        
