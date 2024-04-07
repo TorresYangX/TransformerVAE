@@ -5,6 +5,7 @@ from model_config import ModelConfig
 from model.NVAE_trainer import Trainer
 from dataset_config import DatasetConfig
 from baseline.DeepModels.AE import AE_Trainer
+from baseline.t2vec.t2vec import t2vec_Trainer
 from baseline.DeepModels.VAE import VAE_Trainer
 from baseline.DeepModels.transformer import Transformer_Trainer
 
@@ -34,7 +35,8 @@ if __name__ == '__main__':
         'NVAE': {'trainer': Trainer, 'config': ModelConfig.NVAE},
         'AE': {'trainer': AE_Trainer, 'config': ModelConfig.AE},
         'VAE': {'trainer': VAE_Trainer, 'config': ModelConfig.VAE},
-        'Transformer': {'trainer': Transformer_Trainer, 'config': ModelConfig.Transformer}
+        'Transformer': {'trainer': Transformer_Trainer, 'config': ModelConfig.Transformer},
+        't2vec': {'trainer': t2vec_Trainer, 'config': ModelConfig.t2vec}
     }
     if args.model not in model_mapping:
         raise ValueError('model not found')
