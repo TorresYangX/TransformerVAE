@@ -1,9 +1,21 @@
+import os
+import time
 import torch
 import torch.nn as nn
+from utils import tool_funcs
+from datetime import datetime
+from model_config import ModelConfig
+from dataset_config import DatasetConfig
+from torch.nn.utils import clip_grad_norm_
+from utils.dataloader import read_traj_dataset
+from torch.utils.data.dataloader import DataLoader
 from torch.nn.utils.rnn import pad_packed_sequence
 from torch.nn.utils.rnn import pack_padded_sequence
-import os
-import constants as constants
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.DEBUG)
+
 
 class StackingGRUCell(nn.Module):
     """
@@ -164,7 +176,7 @@ class EncoderDecoder(nn.Module):
         self.embedding_size = embedding_size
         ## the embedding shared by encoder and decoder
         self.embedding = nn.Embedding(vocab_size, embedding_size,
-                                      padding_idx=constants.PAD)
+                                      padding_idx=ModelConfig.t2vec.PAD)
         self.encoder = Encoder(embedding_size, hidden_size, num_layers,
                                dropout, bidirectional, self.embedding)
         self.decoder = Decoder(embedding_size, hidden_size, num_layers,
@@ -209,3 +221,148 @@ class EncoderDecoder(nn.Module):
         output, decoder_hn = self.decoder(trg[:-1], decoder_h0, H)
         return output, decoder_h0
     
+    
+class t2vec_Trainer:
+    def __init__(self):
+        super(t2vec_Trainer, self).__init__()
+        
+        self.checkpoint_file_m0 = '{}/{}_m0_best.pt'.format(ModelConfig.t2vec.checkpoint_dir, DatasetConfig.dataset)
+        self.checkpoint_file_m1 = '{}/{}_m1_best.pt'.format(ModelConfig.t2vec.checkpoint_dir, DatasetConfig.dataset)
+        
+        if os.path.exists(self.checkpoint_file_m0):
+            print("Loading m0, m1...")
+            self.m0 = EncoderDecoder(ModelConfig.t2vec.vocab_size,
+                                ModelConfig.t2vec.embedding_dim,
+                                ModelConfig.t2vec.hidden_dim,
+                                num_layers=ModelConfig.t2vec.num_layers,
+                                dropout=ModelConfig.t2vec.dropout,
+                                bidirectional=True).to(ModelConfig.device)
+            self.m0.load_state_dict(torch.load(self.checkpoint_file_m0))
+            self.m1 = nn.Sequential(nn.Linear(ModelConfig.t2vec.hidden_dim, ModelConfig.t2vec.vocab_size),
+                            nn.LogSoftmax(dim=1)).to(ModelConfig.device)
+            self.m1.load_state_dict(torch.load(self.checkpoint_file_m1))
+        else:
+            self.m0 = EncoderDecoder(ModelConfig.t2vec.vocab_size,
+                                ModelConfig.t2vec.embedding_dim,
+                                ModelConfig.t2vec.hidden_dim,
+                                num_layers=ModelConfig.t2vec.num_layers,
+                                dropout=ModelConfig.t2vec.dropout,
+                                bidirectional=True).to(ModelConfig.device)
+            self.m1 = nn.Sequential(nn.Linear(ModelConfig.t2vec.hidden_dim, ModelConfig.t2vec.vocab_size),
+                            nn.LogSoftmax(dim=1)).to(ModelConfig.device)
+        
+        
+    def train(self):
+        training_starttime = time.time()
+        train_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
+        train_dataloader = DataLoader(train_dataset, 
+                                    batch_size=ModelConfig.t2vec.BATCH_SIZE, 
+                                    shuffle=False, 
+                                    num_workers=0, 
+                                    drop_last=True)
+        
+        training_gpu_usage = training_ram_usage = 0.0
+
+        criterion = self.NLLcriterion(ModelConfig.t2vec.vocab_size).to(ModelConfig.device)
+        lossF = lambda o, t: criterion(o, t)
+        
+        m0_optimizer = torch.optim.Adam(self.m0.parameters(), ModelConfig.t2vec.learning_rate)
+        m1_optimizer = torch.optim.Adam(self.m1.parameters(), ModelConfig.t2vec.learning_rate)
+        
+        logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
+        torch.autograd.set_detect_anomaly(True)
+        
+        best_loss_train = 100000
+        best_epoch = 0
+        bad_counter = 0
+        bad_patience = ModelConfig.t2vec.training_bad_patience
+        
+        for i_ep in range(ModelConfig.t2vec.MAX_EPOCH):
+            _time_ep = time.time()
+            train_gpu = []
+            train_ram = []
+            
+            self.m0.train()
+            self.m1.train()
+            
+            loss = self.genLoss(self.m0, self.m1, train_dataloader, m0_optimizer, m1_optimizer, lossF)
+            train_gpu.append(tool_funcs.GPUInfo.mem()[0])
+            train_ram.append(tool_funcs.RAMInfo.mem())
+            
+            logging.info("[Training] ep={}: avg_loss={:.3f}, @={:.3f}/{:.3f}, gpu={}, ram={}" \
+                    .format(i_ep, loss, time.time() - _time_ep, time.time() - training_starttime,
+                    tool_funcs.GPUInfo.mem(), tool_funcs.RAMInfo.mem()))
+            
+            training_gpu_usage = tool_funcs.mean(train_gpu)
+            training_ram_usage = tool_funcs.mean(train_ram)
+            
+            # early stopping
+            if loss < best_loss_train:
+                best_epoch = i_ep
+                best_loss_train = loss
+                bad_counter = 0
+                self.save_checkpoint()
+            else:
+                bad_counter += 1
+                
+            if bad_counter == bad_patience or (i_ep + 1) == ModelConfig.t2vec.MAX_EPOCH:
+                logging.info("[Training] END! @={}, best_epoch={}, best_loss_train={:.6f}" \
+                            .format(time.time()-training_starttime, best_epoch, best_loss_train))
+                break
+        
+        return {'enc_train_time': time.time()-training_starttime, \
+            'enc_train_gpu': training_gpu_usage, \
+            'enc_train_ram': training_ram_usage}
+        
+        
+
+    def NLLcriterion(self, vocab_size):
+        "construct NLL criterion"
+        weight = torch.ones(vocab_size)
+        weight[ModelConfig.t2vec.PAD] = 0
+        ## The first dimension is not batch, thus we need
+        ## to average over the batch manually
+        #criterion = nn.NLLLoss(weight, size_average=False)
+        criterion = nn.NLLLoss(weight, reduction='sum')
+        return criterion
+
+    def genLoss(self, m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF):
+        train_loss = 0
+        for i_batch, batch in enumerate(train_loader):
+            print("batch: ", i_batch)
+            batch = batch.transpose(0,1).to(ModelConfig.device)
+            eos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.EOS).to(ModelConfig.device) # eos = 2500
+            sos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.BOS).to(ModelConfig.device) # sos = 2501
+            src = torch.cat([batch, eos], dim=0)
+            tgt = torch.cat([sos, batch], dim=0)
+            #src (src_seq_len, batch): source tensor
+            #lengths (1, batch): source sequence lengths
+            src = src.long()
+            lengths = torch.full((1, batch.shape[1]), batch.shape[0]).to(ModelConfig.device)
+            tgt = tgt.long()
+            output, _ = m0(src, lengths, tgt) # (seq_len, batch, hidden_size)
+            ## we want to decode target in range [BOS+1:EOS]
+            target = tgt[1:]
+            ## (seq_len, generator_batch, hidden_size) =>
+            ## (seq_len*generator_batch, hidden_size)
+            o = output.view(-1, output.size(2)) # (seq_len*generator_batch, hidden_size)
+            o = m1(o)
+            ## (seq_len*generator_batch,)
+            t = target.view(-1)
+            m0_optimizer.zero_grad()
+            m1_optimizer.zero_grad()
+            loss = lossF(o, t)
+            train_loss += loss
+            loss.backward()
+            clip_grad_norm_(m0.parameters(), ModelConfig.t2vec.max_grad_norm)
+            clip_grad_norm_(m1.parameters(), ModelConfig.t2vec.max_grad_norm)
+            m0_optimizer.step()
+            m1_optimizer.step()
+        return train_loss.div(len(train_loader.dataset))
+    
+    def save_checkpoint(self):
+        torch.save({'m0_state_dict': self.m0.state_dict(),},
+                    self.checkpoint_file_m0)
+        torch.save({'m1_state_dict': self.m1.state_dict(),},
+                    self.checkpoint_file_m1)
+        return 
