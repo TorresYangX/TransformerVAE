@@ -136,4 +136,40 @@ class ModelConfig:
                             ))
             return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
         
+    
+    class t2vec:
+        model = 't2vec'
         
+        PAD = 0
+        UNK = 3
+
+        PAD_WORD = '<blank>'
+        BOS_WORD = '<s>'
+        EOS_WORD = '</s>'
+        UNK_WORD = '<unk>'
+        
+        BATCH_SIZE = 64
+        grid_num = 50
+        vocab_size = grid_num * grid_num + 2
+        BOS = grid_num * grid_num + 1
+        EOS = grid_num * grid_num
+        dropout = 0.1
+        embedding_dim = 64
+        hidden_dim = 16
+        num_layers = 3
+        
+        learning_rate = 1e-3
+        MAX_EPOCH = 300
+        max_grad_norm = 5.0
+        training_bad_patience = 10
+        
+        checkpoint_dir = 'exp/{}/t2vec'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls): # __str__, self
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
