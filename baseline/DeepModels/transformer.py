@@ -1,7 +1,18 @@
 import math
-
+import time
 import torch
 import torch.nn as nn
+from utils import tool_funcs
+from datetime import datetime
+from model_config import ModelConfig
+from dataset_config import DatasetConfig
+from utils.dataloader import read_traj_dataset
+from torch.utils.data.dataloader import DataLoader
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.DEBUG)
+
 
 # Note:
 # B: Batch size
@@ -56,21 +67,21 @@ class Transformer(nn.Transformer):
     If we keep this format the attention masks for padding are identical for autoencoder's encoder + decoder .
     """
 
-    def __init__(self, embedding_dim, NUM_HEADS, NUM_LAYERS, DIM_FORWARD, DROPOUT, vocab_size):
+    def __init__(self):
         super().__init__(
-            d_model=embedding_dim,
-            nhead=NUM_HEADS,
-            num_encoder_layers=NUM_LAYERS,
-            num_decoder_layers=NUM_LAYERS,
-            dim_feedforward= DIM_FORWARD,
-            dropout=DROPOUT,
+            d_model=ModelConfig.Transformer.embedding_dim,
+            nhead=ModelConfig.Transformer.NUM_HEADS,
+            num_encoder_layers=ModelConfig.Transformer.NUM_LAYERS,
+            num_decoder_layers=ModelConfig.Transformer.NUM_LAYERS,
+            dim_feedforward= ModelConfig.Transformer.DIM_FORWARD,
+            dropout=ModelConfig.Transformer.dropout,
             batch_first=False,
             norm_first=False,
         )
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.positional_encoding = PositionalEncoding(embedding_dim)
-        self.output_proj = nn.Linear(embedding_dim, vocab_size)
-        self.drop = nn.Dropout(DROPOUT)
+        self.embedding = nn.Embedding(ModelConfig.Transformer.vocab_size, ModelConfig.Transformer.embedding_dim, padding_idx=0)
+        self.positional_encoding = PositionalEncoding(ModelConfig.Transformer.embedding_dim)
+        self.output_proj = nn.Linear(ModelConfig.Transformer.embedding_dim, ModelConfig.Transformer.vocab_size)
+        self.drop = nn.Dropout(ModelConfig.Transformer.dropout)
 
     def encode(self, src, src_key_padding_mask):
         """
@@ -197,3 +208,109 @@ class Transformer(nn.Transformer):
             "logits": output,  # [Nt, B, V]
             **latent_output_dict,
         }
+    
+    
+class Transformer_Trainer:
+    def __init__(self):
+        super(Transformer_Trainer, self).__init__()
+        
+        self.model = Transformer().to(ModelConfig.device)
+        
+        self.eos_tensor = torch.full((ModelConfig.Transformer.Batch_size, 1), ModelConfig.Transformer.eos)
+        self.sos_tensor = torch.full((ModelConfig.Transformer.Batch_size, 1), ModelConfig.Transformer.sos)
+        
+        self.src_key_padding_mask = torch.zeros((ModelConfig.Transformer.Batch_size, ModelConfig.Transformer.traj_len + 1), 
+                                                dtype = torch.bool).to(ModelConfig.device)
+        self.tgt_key_padding_mask = torch.zeros((ModelConfig.Transformer.Batch_size, ModelConfig.Transformer.traj_len + 1), 
+                                                dtype = torch.bool).to(ModelConfig.device)
+        
+        self.checkpoint_file = '{}/{}_Trasformer_best.pt'.format(ModelConfig.Transformer.checkpoint_dir, DatasetConfig.dataset)
+        
+    def train(self):
+        training_starttime = time.time()
+        train_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
+        train_dataloader = DataLoader(train_dataset, 
+                                        batch_size = ModelConfig.Transformer.Batch_size, 
+                                        shuffle = False, 
+                                        num_workers = 0, 
+                                        drop_last = True)
+        
+        training_gpu_usage = training_ram_usage = 0.0
+        logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
+        torch.autograd.set_detect_anomaly(True)
+        
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.Transformer.learning_rate, weight_decay = 0.0001)
+        
+        best_loss_train = 100000
+        best_epoch = 0
+        bad_counter = 0
+        bad_patience = ModelConfig.Transformer.training_bad_patience
+        
+        for i_ep in range(ModelConfig.Transformer.MAX_EPOCH):
+            _time_ep = time.time()
+            loss_ep = []
+            train_gpu = []
+            train_ram = []
+            
+            self.model.train()
+            
+            _time_batch_start = time.time()
+            for i_batch, batch in enumerate(train_dataloader):
+                print("batch: ", i_batch)
+                optimizer.zero_grad()
+                batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
+                batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
+                
+                train_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
+                train_loss = self.model.loss_fn(**train_dict, targets = batch_tgt)
+                
+                train_loss['Loss'].backward()
+                
+                optimizer.step()
+                optimizer.zero_grad()
+                loss_ep.append(train_loss['Loss'].item())
+                train_gpu.append(tool_funcs.GPUInfo.mem()[0])
+                train_ram.append(tool_funcs.RAMInfo.mem())
+                
+                if i_batch % 100 == 0 and i_batch:
+                    logging.debug("[Training] ep-batch={}-{}, loss={:.3f}, @={:.3f}, gpu={}, ram={}" \
+                            .format(i_ep, i_batch, train_loss['Loss'].item(), time.time() - _time_batch_start,
+                                    tool_funcs.GPUInfo.mem(), tool_funcs.RAMInfo.mem()))
+                
+            loss_ep_avg = tool_funcs.mean(loss_ep)
+            logging.info("[Training] ep={}: avg_loss={:.3f}, @={:.3f}/{:.3f}, gpu={}, ram={}" \
+                    .format(i_ep, loss_ep_avg, time.time() - _time_ep, time.time() - training_starttime,
+                    tool_funcs.GPUInfo.mem(), tool_funcs.RAMInfo.mem()))
+            
+            training_gpu_usage = tool_funcs.mean(train_gpu)
+            training_ram_usage = tool_funcs.mean(train_ram)
+            
+            # early stopping
+            if loss_ep_avg < best_loss_train:
+                best_epoch = i_ep
+                best_loss_train = loss_ep_avg
+                bad_counter = 0
+                self.save_checkpoint()
+            else:
+                bad_counter += 1
+            
+            if bad_counter == bad_patience or (i_ep + 1) == ModelConfig.Transformer.MAX_EPOCH:
+                logging.info("[Training] END! @={}, best_epoch={}, best_loss_train={:.6f}" \
+                            .format(time.time()-training_starttime, best_epoch, best_loss_train))
+                break
+            
+        return {'enc_train_time': time.time()-training_starttime, \
+            'enc_train_gpu': training_gpu_usage, \
+            'enc_train_ram': training_ram_usage}
+        
+    
+    def save_checkpoint(self):
+        torch.save({'model_state_dict': self.model.state_dict(),},
+                    self.checkpoint_file)
+        return  
+    
+    def load_checkpoint(self):
+        checkpoint = torch.load(self.checkpoint_file)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model.to(ModelConfig.device)
+        return
