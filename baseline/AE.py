@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+import numpy as np
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -95,7 +96,7 @@ class AE_Trainer:
         logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
         torch.autograd.set_detect_anomaly(True)
         
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.AE.learning_rate, weight_decay = 0.0001)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.AE.learning_rate)
         
         best_loss_train = 100000
         best_epoch = 0
@@ -155,6 +156,53 @@ class AE_Trainer:
         return {'enc_train_time': time.time()-training_starttime, \
             'enc_train_gpu': training_gpu_usage, \
             'enc_train_ram': training_ram_usage}
+        
+    
+    def encode(self, tp):
+        if tp == 'total':
+            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
+            dataloader = DataLoader(total_dataset,
+                                    batch_size = ModelConfig.AE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'ground':
+            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
+            dataloader = DataLoader(ground_dataset,
+                                    batch_size = ModelConfig.AE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'test':
+            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
+            dataloader = DataLoader(test_dataset,
+                                    batch_size = ModelConfig.AE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        else:
+            raise ValueError("Invalid type of dataset.")
+        
+        logging.info('[Encode]start.')
+        self.make_indexfolder()
+        self.load_checkpoint()
+        self.model.eval()
+        
+        index = {
+            'prob': [],
+        }
+        
+        for i_batch, batch in enumerate(dataloader):
+            dict = self.model(batch.to(ModelConfig.device))
+            prob = dict['prob'][:, 0, :]
+            index['prob'].append(prob)
+            
+        index['prob'] = torch.cat(index['prob'], dim = 0).view(-1, ModelConfig.AE.latent_dim)
+        
+        np.savetxt(ModelConfig.AE.index_dir + '/prob/{}_prob.csv'.format(tp), index['prob'].cpu().detach().numpy())
+        
+        return
+            
                 
                 
                 
@@ -162,3 +210,13 @@ class AE_Trainer:
         torch.save({'model_state_dict': self.model.state_dict(),},
                     self.checkpoint_file)
         return  
+    
+    def load_checkpoint(self):
+        checkpoint = torch.load(self.checkpoint_file)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        return
+    
+    def make_indexfolder(self):
+        if not os.path.exists(ModelConfig.AE.index_dir+'/prob'):
+            os.mkdir(ModelConfig.AE.index_dir+'/prob')
+        return
