@@ -1,6 +1,8 @@
+import os
 import math
 import time
 import torch
+import numpy as np
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -303,6 +305,57 @@ class Transformer_Trainer:
             'enc_train_ram': training_ram_usage}
         
     
+    def encode(self, tp):
+        if tp == 'total':
+            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
+            dataloader = DataLoader(total_dataset,
+                                    batch_size = ModelConfig.Transformer.Batch_size,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'ground':
+            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
+            dataloader = DataLoader(ground_dataset,
+                                    batch_size = ModelConfig.Transformer.Batch_size,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'test':
+            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
+            dataloader = DataLoader(test_dataset,
+                                    batch_size = ModelConfig.Transformer.Batch_size,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        else:
+            raise ValueError("Invalid type of dataset.")
+        
+        logging.info('[Encode]start.')
+        self.make_indexfolder()
+        self.load_checkpoint()
+        self.model.eval()
+        
+        index = {
+            'prob': [],
+        }
+
+        for i_batch, batch in enumerate(dataloader):
+            batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
+            batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
+            
+            enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
+           
+            encoder_ouput = enc_dict['z']
+            prob = encoder_ouput.mean(dim=0, keepdim=True)
+            index['prob'].append(prob)
+            
+        index['prob'] = torch.cat(index['prob'], dim = 0).view(-1, ModelConfig.Transformer.embedding_dim)
+        
+        np.savetxt(ModelConfig.Transformer.index_dir + '/prob/{}_prob.csv'.format(tp), index['prob'].cpu().detach().numpy())
+        
+        return
+        
+    
     def save_checkpoint(self):
         torch.save({'model_state_dict': self.model.state_dict(),},
                     self.checkpoint_file)
@@ -312,4 +365,9 @@ class Transformer_Trainer:
         checkpoint = torch.load(self.checkpoint_file)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.to(ModelConfig.device)
+        return
+    
+    def make_indexfolder(self):
+        if not os.path.exists(ModelConfig.Transformer.index_dir+'/prob'):
+            os.mkdir(ModelConfig.Transformer.index_dir+'/prob')
         return
