@@ -124,7 +124,6 @@ class VAE_Trainer:
             
             _time_batch_start = time.time()
             for i_batch, batch in enumerate(train_dataloader):
-                print("batch: ", i_batch)
                 optimizer.zero_grad()
                 
                 train_dict = self.model(batch.to(ModelConfig.device))

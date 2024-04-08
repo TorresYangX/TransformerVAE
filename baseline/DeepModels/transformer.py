@@ -256,7 +256,6 @@ class Transformer_Trainer:
             
             _time_batch_start = time.time()
             for i_batch, batch in enumerate(train_dataloader):
-                print("batch: ", i_batch)
                 optimizer.zero_grad()
                 batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
                 batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)

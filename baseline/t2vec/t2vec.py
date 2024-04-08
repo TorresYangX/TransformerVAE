@@ -329,7 +329,6 @@ class t2vec_Trainer:
     def genLoss(self, m0, m1, train_loader, m0_optimizer, m1_optimizer, lossF):
         train_loss = 0
         for i_batch, batch in enumerate(train_loader):
-            print("batch: ", i_batch)
             batch = batch.transpose(0,1).to(ModelConfig.device)
             eos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.EOS).to(ModelConfig.device) # eos = 2500
             sos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.BOS).to(ModelConfig.device) # sos = 2501
