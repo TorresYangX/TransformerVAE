@@ -38,7 +38,7 @@ class ModelConfig:
         KL_ANNEALING_GAUSSIAN = "constant"
         KL_ANNEALING_DIRICHLET = "constant"
         
-        learning_rate = 0.001
+        learning_rate = 1e-3
         training_lr_degrade_step = 5
         training_lr_degrade_gamma = 0.5
         training_bad_patience = 5
@@ -66,7 +66,7 @@ class ModelConfig:
         dropout = 0.1
         BATCH_SIZE = 16
         
-        learning_rate = 1e-7
+        learning_rate = 1e-3
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/AE'.format(DatasetConfig.dataset)
@@ -92,7 +92,7 @@ class ModelConfig:
         vocab_size = grid_num * grid_num + 2
         BATCH_SIZE = 16
         
-        learning_rate = 1e-7
+        learning_rate = 1e-3
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/VAE'.format(DatasetConfig.dataset)
@@ -122,7 +122,7 @@ class ModelConfig:
         eos = grid_num * grid_num + 1
         Batch_size = 16
         
-        learning_rate = 1e-7
+        learning_rate = 1e-3
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/Transformer'.format(DatasetConfig.dataset)
