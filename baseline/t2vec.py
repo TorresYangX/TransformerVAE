@@ -1,7 +1,7 @@
 import os
 import time
 import torch
-import numpy as np
+import pandas as pd
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -396,8 +396,8 @@ class t2vec_Trainer:
             idx = decoder_h0.mean(dim=0)
             index['prob'].append(idx)
             
-        index['prob'] = torch.cat(index['prob'], dim=0).view(-1, ModelConfig.t2vec.hidden_dim)
-        np.savetxt(ModelConfig.t2vec.index_dir+'/prob/{}_index.csv'.format(tp), index['prob'].cpu().detach().numpy())
+        index['prob'] = torch.cat(index['prob'], dim=0).view(-1, ModelConfig.t2vec.hidden_dim).cpu().detach().numpy()
+        pd.DataFrame(index['prob']).to_csv(ModelConfig.t2vec.index_dir+'/prob/{}_index.csv'.format(tp), header=None, index=None)
         
         
     
