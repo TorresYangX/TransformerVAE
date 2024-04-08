@@ -21,12 +21,12 @@ class Trainer:
         
         self.model = TransformerNvib().to(ModelConfig.device)
         
-        self.eos_tensor = torch.full((ModelConfig.NVAE.Batch_size, 1), ModelConfig.NVAE.eos)
-        self.sos_tensor = torch.full((ModelConfig.NVAE.Batch_size, 1), ModelConfig.NVAE.sos)
+        self.eos_tensor = torch.full((ModelConfig.NVAE.BATCH_SIZE, 1), ModelConfig.NVAE.eos)
+        self.sos_tensor = torch.full((ModelConfig.NVAE.BATCH_SIZE, 1), ModelConfig.NVAE.sos)
         
-        self.src_key_padding_mask = torch.zeros((ModelConfig.NVAE.Batch_size, ModelConfig.NVAE.traj_len + 1), 
+        self.src_key_padding_mask = torch.zeros((ModelConfig.NVAE.BATCH_SIZE, ModelConfig.NVAE.traj_len + 1), 
                                                 dtype = torch.bool).to(ModelConfig.device)
-        self.tgt_key_padding_mask = torch.zeros((ModelConfig.NVAE.Batch_size, ModelConfig.NVAE.traj_len + 1), 
+        self.tgt_key_padding_mask = torch.zeros((ModelConfig.NVAE.BATCH_SIZE, ModelConfig.NVAE.traj_len + 1), 
                                                 dtype = torch.bool).to(ModelConfig.device)
 
         self.checkpoint_file = '{}/{}_NVAE_best.pt'.format(ModelConfig.NVAE.checkpoint_dir, 
@@ -37,7 +37,7 @@ class Trainer:
         training_starttime = time.time()
         train_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
         train_dataloader = DataLoader(train_dataset, 
-                                        batch_size = ModelConfig.NVAE.Batch_size, 
+                                        batch_size = ModelConfig.NVAE.BATCH_SIZE, 
                                         shuffle = False, 
                                         num_workers = 0, 
                                         drop_last = True)
@@ -125,21 +125,21 @@ class Trainer:
         if tp == 'total':
             total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
             dataloader = DataLoader(total_dataset,
-                                    batch_size = ModelConfig.NVAE.Batch_size,
+                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
         elif tp == 'ground':
             ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
             dataloader = DataLoader(ground_dataset,
-                                    batch_size = ModelConfig.NVAE.Batch_size,
+                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
         elif tp == 'test':
             test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
             dataloader = DataLoader(test_dataset,
-                                    batch_size = ModelConfig.NVAE.Batch_size,
+                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
