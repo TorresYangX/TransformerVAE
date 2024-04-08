@@ -1,13 +1,13 @@
 import sys
 import logging
 import argparse
+from baseline.AE import AE_Trainer
+from baseline.VAE import VAE_Trainer
 from model_config import ModelConfig
 from model.NVAE_trainer import Trainer
+from baseline.t2vec import t2vec_Trainer
 from dataset_config import DatasetConfig
-from baseline.DeepModels.AE import AE_Trainer
-from baseline.t2vec.t2vec import t2vec_Trainer
-from baseline.DeepModels.VAE import VAE_Trainer
-from baseline.DeepModels.transformer import Transformer_Trainer
+from baseline.transformer import Transformer_Trainer
 
 
 logging.getLogger().setLevel(logging.INFO)
@@ -47,4 +47,5 @@ if __name__ == '__main__':
     logging.info('=================================')
 
     trainer = trainer_class()
-    trainer.train()
+    # trainer.train()
+    trainer.encode('test')
