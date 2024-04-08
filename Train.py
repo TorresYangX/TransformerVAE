@@ -48,4 +48,4 @@ if __name__ == '__main__':
 
     trainer = trainer_class()
     # trainer.train()
-    trainer.encode('test')
+    trainer.encode('total')
