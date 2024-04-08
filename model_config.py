@@ -148,7 +148,7 @@ class ModelConfig:
         EOS_WORD = '</s>'
         UNK_WORD = '<unk>'
         
-        BATCH_SIZE = 64
+        BATCH_SIZE = 16
         grid_num = 50
         vocab_size = grid_num * grid_num + 2
         BOS = grid_num * grid_num + 1
@@ -164,6 +164,7 @@ class ModelConfig:
         training_bad_patience = 10
         
         checkpoint_dir = 'exp/{}/t2vec'.format(DatasetConfig.dataset)
+        index_dir = root_dir + '/exp/{}/t2vec/index'.format(DatasetConfig.dataset)
         
         @classmethod
         def to_str(cls): # __str__, self
