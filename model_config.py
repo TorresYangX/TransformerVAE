@@ -20,7 +20,7 @@ class ModelConfig:
         vocab_size = grid_num * grid_num + 2 #V
         sos = grid_num * grid_num
         eos = grid_num * grid_num + 1
-        Batch_size = 16 #B
+        BATCH_SIZE = 16 #B
         embedding_dim = 16 # H
         dim_forward = 2048
         nhead = 1
@@ -70,6 +70,7 @@ class ModelConfig:
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/AE'.format(DatasetConfig.dataset)
+        index_dir = root_dir + '/exp/{}/AE/index'.format(DatasetConfig.dataset)
         
         @classmethod
         def to_str(cls): # __str__, self
@@ -96,6 +97,7 @@ class ModelConfig:
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/VAE'.format(DatasetConfig.dataset)
+        index_dir = root_dir + '/exp/{}/VAE/index'.format(DatasetConfig.dataset)
         
         @classmethod
         def to_str(cls): # __str__, self
@@ -120,7 +122,7 @@ class ModelConfig:
         vocab_size = grid_num * grid_num + 2
         sos = grid_num * grid_num
         eos = grid_num * grid_num + 1
-        Batch_size = 16
+        BATCH_SIZE = 16
         
         learning_rate = 1e-3
         training_bad_patience = 10
