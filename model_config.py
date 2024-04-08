@@ -126,6 +126,7 @@ class ModelConfig:
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/Transformer'.format(DatasetConfig.dataset)
+        index_dir = root_dir + '/exp/{}/Transformer/index'.format(DatasetConfig.dataset)
         
         @classmethod
         def to_str(cls): # __str__, self
