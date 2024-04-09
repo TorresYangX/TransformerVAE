@@ -2,6 +2,7 @@ import os
 import time
 import torch
 import numpy as np
+import pandas as pd
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -193,12 +194,12 @@ class AE_Trainer:
         
         for i_batch, batch in enumerate(dataloader):
             dict = self.model(batch.to(ModelConfig.device))
-            prob = dict['prob'][:, 0, :]
+            prob = dict['prob'][:, 0, :].cpu().detach()
             index['prob'].append(prob)
             
         index['prob'] = torch.cat(index['prob'], dim = 0).view(-1, ModelConfig.AE.latent_dim)
         
-        np.savetxt(ModelConfig.AE.index_dir + '/prob/{}_prob.csv'.format(tp), index['prob'].cpu().detach().numpy())
+        pd.DataFrame(index['prob']).to_csv(ModelConfig.AE.index_dir+'/prob/{}_index.csv'.format(tp), header=None, index=None)
         
         return
             

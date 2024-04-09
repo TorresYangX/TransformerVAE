@@ -3,6 +3,7 @@ import math
 import time
 import torch
 import numpy as np
+import pandas as pd
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -346,12 +347,12 @@ class Transformer_Trainer:
             enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
            
             encoder_ouput = enc_dict['z']
-            prob = encoder_ouput.mean(dim=0, keepdim=True)
+            prob = encoder_ouput.mean(dim=0, keepdim=True).cpu().detach()
             index['prob'].append(prob)
             
         index['prob'] = torch.cat(index['prob'], dim = 0).view(-1, ModelConfig.Transformer.embedding_dim)
         
-        np.savetxt(ModelConfig.Transformer.index_dir + '/prob/{}_prob.csv'.format(tp), index['prob'].cpu().detach().numpy())
+        pd.DataFrame(index['prob']).to_csv(ModelConfig.Transformer.index_dir+'/prob/{}_index.csv'.format(tp), header=None, index=None)
         
         return
         
