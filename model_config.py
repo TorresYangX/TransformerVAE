@@ -66,7 +66,7 @@ class ModelConfig:
         dropout = 0.1
         BATCH_SIZE = 16
         
-        learning_rate = 1e-3
+        learning_rate = 1e-5
         training_bad_patience = 10
         MAX_EPOCH = 500
         checkpoint_dir = 'exp/{}/AE'.format(DatasetConfig.dataset)
