@@ -63,15 +63,13 @@ class VAE(nn.Module):
         return x_hat
 
     def loss_fn(self, logits, targets, mu, logvar):
-        KL_WEIGHT = 0.01
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
         targets = torch.flatten(targets)
         logits = torch.flatten(logits, start_dim=0, end_dim=1)
         BCE = criterion(logits, targets).mean()
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        print(BCE, KL_WEIGHT*KLD)
         return {
-            "Loss": BCE + KL_WEIGHT * KLD,
+            "Loss": BCE + ModelConfig.VAE.KL_WEIGHT * KLD,
             "BCE": BCE,
             "KLD": KLD,
         }
@@ -128,19 +126,20 @@ class VAE_Trainer:
                 optimizer.zero_grad()
                 
                 train_dict = self.model(batch.to(ModelConfig.device))
-                train_loss = self.model.loss_fn(targets=batch.to(ModelConfig.device), **train_dict)['Loss']
+                train_loss = self.model.loss_fn(targets=batch.to(ModelConfig.device), **train_dict)
                 
-                train_loss.backward()
+                train_loss['Loss'].backward()
                 optimizer.step()
                 
-                loss_ep.append(train_loss.item())
+                loss_ep.append(train_loss['Loss'].item())
                 train_gpu.append(tool_funcs.GPUInfo.mem()[0])
                 train_ram.append(tool_funcs.RAMInfo.mem())
                 
                 if i_batch % 100 == 0 and i_batch:
                     logging.debug("[Training] ep-batch={}-{}, loss={:.3f}, @={:.3f}, gpu={}, ram={}" \
-                            .format(i_ep, i_batch, train_loss.item(), time.time() - _time_batch_start,
+                            .format(i_ep, i_batch, train_loss['Loss'].item(), time.time() - _time_batch_start,
                                     tool_funcs.GPUInfo.mem(), tool_funcs.RAMInfo.mem()))
+                    logging.debug("BCE={:.3f}, KLD={:.3f}".format(train_loss['BCE'].item(), train_loss['KLD'].item()))
                 
             loss_ep_avg = tool_funcs.mean(loss_ep)
             logging.info("[Training] ep={}: avg_loss={:.3f}, @={:.3f}/{:.3f}, gpu={}, ram={}" \

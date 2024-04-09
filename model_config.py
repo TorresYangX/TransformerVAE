@@ -92,6 +92,7 @@ class ModelConfig:
         grid_num = 50
         vocab_size = grid_num * grid_num + 2
         BATCH_SIZE = 16
+        KL_WEIGHT = 1
         
         learning_rate = 1e-5
         training_bad_patience = 10
