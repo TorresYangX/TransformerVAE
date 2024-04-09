@@ -67,8 +67,9 @@ class VAE(nn.Module):
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction="none")
         targets = torch.flatten(targets)
         logits = torch.flatten(logits, start_dim=0, end_dim=1)
-        BCE = criterion(logits.float(), targets.long()).mean()
+        BCE = criterion(logits, targets).mean()
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        print(BCE, KL_WEIGHT*KLD)
         return {
             "Loss": BCE + KL_WEIGHT * KLD,
             "BCE": BCE,
@@ -107,7 +108,7 @@ class VAE_Trainer:
         logging.info("[Training] START! timestamp={}".format(datetime.fromtimestamp(training_starttime)))
         torch.autograd.set_detect_anomaly(True)
         
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.VAE.learning_rate, weight_decay = 0.0001)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = ModelConfig.VAE.learning_rate)
         
         best_loss_train = 100000
         best_epoch = 0
@@ -127,19 +128,18 @@ class VAE_Trainer:
                 optimizer.zero_grad()
                 
                 train_dict = self.model(batch.to(ModelConfig.device))
-                train_loss = self.model.loss_fn(targets=batch.to(ModelConfig.device), **train_dict)
+                train_loss = self.model.loss_fn(targets=batch.to(ModelConfig.device), **train_dict)['Loss']
                 
-                train_loss['Loss'].backward()
+                train_loss.backward()
                 optimizer.step()
-                optimizer.zero_grad()
                 
-                loss_ep.append(train_loss['Loss'].item())
+                loss_ep.append(train_loss.item())
                 train_gpu.append(tool_funcs.GPUInfo.mem()[0])
                 train_ram.append(tool_funcs.RAMInfo.mem())
                 
                 if i_batch % 100 == 0 and i_batch:
                     logging.debug("[Training] ep-batch={}-{}, loss={:.3f}, @={:.3f}, gpu={}, ram={}" \
-                            .format(i_ep, i_batch, train_loss['Loss'].item(), time.time() - _time_batch_start,
+                            .format(i_ep, i_batch, train_loss.item(), time.time() - _time_batch_start,
                                     tool_funcs.GPUInfo.mem(), tool_funcs.RAMInfo.mem()))
                 
             loss_ep_avg = tool_funcs.mean(loss_ep)
