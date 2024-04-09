@@ -29,8 +29,7 @@ def retrieve(total_indexs, test_indexs, retr_num, retr_file, total_data):
     tree = KDTree(total_indexs)
     solution = []
     for i in range(len(test_indexs)):
-        nearest_dist, nearest_ind = tree.query(test_indexs[i].reshape(1,test_indexs.shape[1]), k=retr_num)
-        meanLoss = nearest_dist[0].mean()
+        _, nearest_ind = tree.query(test_indexs[i].reshape(1,test_indexs.shape[1]), k=retr_num)
         solution += list(nearest_ind[0])
     logging.info('End to retrieve, begin to save...')
     save_retr_traj(retr_file, total_data, solution)
@@ -39,9 +38,7 @@ def retrieve(total_indexs, test_indexs, retr_num, retr_file, total_data):
 def save_retr_traj(retr_file, total_data, solution):
     retr_trajs= [pd.DataFrame(total_data.iloc[i]).T for i in solution]
     combined_data = pd.concat(retr_trajs, axis=0, ignore_index=True)
-    with open(retr_file, mode='w') as f:
-        combined_data.to_csv(f, header=None, index=False)
-    logging.info('Save retrieve trajs to %s' % retr_file)
+    combined_data.to_pickle(retr_file)
     return 0
     
     
@@ -91,5 +88,3 @@ if __name__ == '__main__':
     logging.info('retr_num: %d' % retr_num)
     
     retrieve(total_indexs, test_indexs, retr_num, retrieve_trajs_file, total_data)
-    retrievalLen = len(pd.read_csv(retrieve_trajs_file, header = None))
-    logging.info('retrievalLen: %d' % retrievalLen)
