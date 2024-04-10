@@ -55,7 +55,7 @@ KL_ANNEALING_FACTOR_DIRICHLET_LIST = kl_annealing(
 class TokenEmbedding(nn.Module):
     def __init__(self):
         super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(num_embeddings=ModelConfig.NVAE.vocab_size, embedding_dim=ModelConfig.NVAE.embedding_dim)
+        self.embedding = nn.Embedding(num_embeddings=ModelConfig.NVAE.vocab_size, embedding_dim=ModelConfig.NVAE.d_model)
 
     def forward(self, x):
         return self.embedding(x)
@@ -87,7 +87,7 @@ class PositionalEncoding(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(self):
         super(TransformerEncoder, self).__init__()
-        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=ModelConfig.NVAE.embedding_dim, 
+        self.TransformerEncoderLayer = nn.TransformerEncoderLayer(d_model=ModelConfig.NVAE.d_model, 
                                                                   nhead=ModelConfig.NVAE.nhead, 
                                                                   dim_feedforward=ModelConfig.NVAE.dim_forward, 
                                                                   dropout=ModelConfig.NVAE.dropout, 
@@ -102,7 +102,7 @@ class TransformerEncoder(nn.Module):
 class TransformerDecoder(nn.Module):
     def __init__(self):
         super(TransformerDecoder, self).__init__()
-        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=ModelConfig.NVAE.embedding_dim, 
+        self.TransformerDecoderLayer = nn.TransformerDecoderLayer(d_model=ModelConfig.NVAE.d_model, 
                                                                   nhead=ModelConfig.NVAE.nhead, 
                                                                   dim_feedforward=ModelConfig.NVAE.dim_forward, 
                                                                   dropout=ModelConfig.NVAE.dropout, 
@@ -111,7 +111,7 @@ class TransformerDecoder(nn.Module):
                                                                   device=device) 
         self.TransformerDecoder = nn.TransformerDecoder(self.TransformerDecoderLayer, num_layers=ModelConfig.NVAE.num_layers)
         for _, layer in enumerate(self.TransformerDecoder.layers):
-            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=ModelConfig.NVAE.embedding_dim,
+            layer.multihead_attn = DenoisingMultiheadAttention(embed_dim=ModelConfig.NVAE.d_model,
                                                                num_heads=ModelConfig.NVAE.nhead,
                                                                dropout=ModelConfig.NVAE.dropout,
                                                                bias=False)
@@ -134,8 +134,9 @@ class TransformerNvib(nn.Module):
     def __init__(self):
         super(TransformerNvib, self).__init__()
         self.token_embedding = TokenEmbedding()
-        self.position_embedding = PositionalEncoding(ModelConfig.NVAE.embedding_dim)
+        self.position_embedding = PositionalEncoding(ModelConfig.NVAE.d_model)
         self.transformer_encoder = TransformerEncoder()
+        self.encoderlinear = nn.Linear(ModelConfig.NVAE.d_model, ModelConfig.NVAE.embedding_dim)
         self.nvib = Nvib(
             size_in = ModelConfig.NVAE.embedding_dim,
             size_out = ModelConfig.NVAE.embedding_dim,
@@ -145,25 +146,27 @@ class TransformerNvib(nn.Module):
             kappa = ModelConfig.NVAE.KAPPA,
             delta = ModelConfig.NVAE.DELTA,
         )
+        self.decoderlinear = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.d_model)
         self.transformer_decoder = TransformerDecoder()
-        self.output_proj = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.vocab_size)
+        self.output_proj = nn.Linear(ModelConfig.NVAE.d_model, ModelConfig.NVAE.vocab_size)
         self.drop = nn.Dropout(ModelConfig.NVAE.dropout)
 
     def encode(self,src, src_key_padding_mask):
-        src = self.token_embedding(src.to(torch.int64).to(device)) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
+        src = self.token_embedding(src) #(trajectory_length, Batch_size, d_model) (60,64,512)
         src = self.drop(src)
-        src = self.position_embedding(src).to(torch.float32) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
+        src = self.position_embedding(src) #(trajectory_length, Batch_size, d_model) (60,64,512)
         src = self.transformer_encoder(src, src_key_padding_mask)
+        src = self.encoderlinear(src) #(trajectory_length, Batch_size, embedding_dim) (60,64,16)
         return src
     
     def decode(self, tgt, memory, memory_key_padding_mask, tgt_key_padding_mask):
-        tgt = self.token_embedding(tgt.to(torch.int64).to(device))
+        tgt = self.token_embedding(tgt)
         tgt = self.drop(tgt)
         tgt = self.position_embedding(tgt).to(torch.float32) 
         tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[0]).to(device) 
         output = self.transformer_decoder(
-            tgt=tgt,  # [Nt,B,H] (trajectory_length+1, Batch_size, embedding_dim) (61,64,512)
-            memory=memory,  # [Nt,B,H] (trajectory_length+1, Batch_size, embedding_dim) (61,64,512)
+            tgt=tgt,  # [Nt,B,H] (trajectory_length+1, Batch_size, d_model) (61,64,512)
+            memory=memory,  # [Nt,B,H] (trajectory_length+1, Batch_size, d_model) (61,64,512)
             tgt_mask=tgt_mask,  # [Nt,Nt] (61,61)
             tgt_key_padding_mask=tgt_key_padding_mask,  # [B,Nt] (64,61)
             memory_key_padding_mask=memory_key_padding_mask, # [B,Nt] (64,61)
@@ -206,7 +209,7 @@ class TransformerNvib(nn.Module):
         # Transform vocabulary
         logits = torch.flatten(logits, start_dim=0, end_dim=1)  # [Nt x B, V]
         # Calculates loss over [Nt x B]
-        cross_entropy_loss = criterion(logits.float(), targets.long())  # [Nt x B]
+        cross_entropy_loss = criterion(logits, targets)  # [Nt x B]
         # Average loss + average KL for backprop and sum loss for logging
         KL_ANNEALING_FACTOR_GAUSSIAN = KL_ANNEALING_FACTOR_GAUSSIAN_LIST[epoch-1] 
         KL_ANNEALING_FACTOR_DIRICHLET = KL_ANNEALING_FACTOR_DIRICHLET_LIST[epoch-1]
@@ -220,8 +223,10 @@ class TransformerNvib(nn.Module):
         }
 
     def forward(self, src, tgt, src_key_padding_mask, tgt_key_padding_mask):
-        memory = self.encode(src, src_key_padding_mask=src_key_padding_mask) #(trajectory_length, Batch_size, embedding_dim) (60,64,512)
-        latent_output_dict = self.nvib(memory, src_key_padding_mask)
+        nvib_input = self.encode(src, src_key_padding_mask=src_key_padding_mask) #(trajectory_length, Batch_size, embedding_dim) (60,64,16)
+        latent_output_dict = self.nvib(nvib_input, src_key_padding_mask)
+        z_ = self.decoderlinear(latent_output_dict["z"][0]) #(trajectory_length, Batch_size, d_model) (60,64,512)
+        memory = (z_, latent_output_dict["z"][1], latent_output_dict["z"][2], latent_output_dict["z"][3])
         output = self.decode(
             tgt=tgt,
             # latent_output_dict["z"]: tuple(z, pi, mu, logvar), 
@@ -229,7 +234,7 @@ class TransformerNvib(nn.Module):
             # pi:(trajectory_length+1, Batch_size, 1), ##nan##
             # mu:(trajectory_length+1, Batch_size, embedding_dim),
             # logvar:(trajectory_length+1, Batch_size, embedding_dim),
-            memory=latent_output_dict["z"], 
+            memory=memory, 
             tgt_key_padding_mask=tgt_key_padding_mask,  # [B,Nt]
             memory_key_padding_mask=latent_output_dict["memory_key_padding_mask"],
         )  # [B,Nl] 
