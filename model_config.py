@@ -21,8 +21,9 @@ class ModelConfig:
         sos = grid_num * grid_num
         eos = grid_num * grid_num + 1
         BATCH_SIZE = 16 #B
+        d_model = 128
         embedding_dim = 16 # H
-        dim_forward = 2048
+        dim_forward = 512
         nhead = 1
         dropout = 0.1
         activation = 'relu'
