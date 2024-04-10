@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+import pandas as pd
 import torch.nn as nn
 from utils import tool_funcs
 from datetime import datetime
@@ -166,6 +167,57 @@ class VAE_Trainer:
         return {'enc_train_time': time.time()-training_starttime, \
             'enc_train_gpu': training_gpu_usage, \
             'enc_train_ram': training_ram_usage}
+        
+    
+    def encode(self, tp):
+        if tp == 'total':
+            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
+            dataloader = DataLoader(total_dataset,
+                                    batch_size = ModelConfig.VAE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'ground':
+            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
+            dataloader = DataLoader(ground_dataset,
+                                    batch_size = ModelConfig.VAE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        elif tp == 'test':
+            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
+            dataloader = DataLoader(test_dataset,
+                                    batch_size = ModelConfig.VAE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+        else:
+            raise ValueError("Invalid type of dataset.")
+        
+        logging.info('[Encode]start.')
+        self.make_indexfolder()
+        self.load_checkpoint()
+        self.model.eval()
+        
+        index = {
+            'mu': [],
+            'logvar': []
+        }
+        
+        for i_batch, batch in enumerate(dataloader):
+            dict = self.model(batch.to(ModelConfig.device))
+            mu = dict['mu'][:,0,:].cpu().detach()
+            logvar = dict['logvar'][:,0,:].cpu().detach()
+            index['mu'].append(mu)
+            index['logvar'].append(logvar)
+            
+        index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.VAE.latent_dim)
+        index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.VAE.latent_dim)
+        
+        pd.DataFrame(index['mu']).to_csv(ModelConfig.VAE.index_dir+'/mu/{}_index.csv'.format(tp), header=None, index=None)
+        pd.DataFrame(index['logvar']).to_csv(ModelConfig.VAE.index_dir+'/logvar/{}_index.csv'.format(tp), header=None, index=None)
+        
+        return
                 
                 
                 
@@ -173,6 +225,17 @@ class VAE_Trainer:
         torch.save({'model_state_dict': self.model.state_dict(),},
                     self.checkpoint_file)
         return 
+    
+    def load_checkpoint(self):
+        checkpoint = torch.load(self.checkpoint_file)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        return
+    
+    def make_indexfolder(self):
+        if not os.path.exists(ModelConfig.VAE.index_dir+'/mu'):
+            os.mkdir(ModelConfig.VAE.index_dir+'/mu')
+            os.mkdir(ModelConfig.VAE.index_dir+'/logvar')
+        return
         
 
 
