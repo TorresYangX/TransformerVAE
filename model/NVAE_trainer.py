@@ -162,15 +162,15 @@ class Trainer:
             batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
             
             enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
-            mu = enc_dict['mu'].mean(dim = 0, keepdim = True)
-            logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True)
-            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
-            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
+            mu = enc_dict['mu'].mean(dim = 0, keepdim = True).cpu().detach()
+            logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True).cpu().detach()
+            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
+            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
             
-            index['mu'].append(mu).cpu().detach()
-            index['logvar'].append(logvar).cpu().detach()
-            index['pi'].append(pi).cpu().detach()
-            index['alpha'].append(alpha).cpu().detach()
+            index['mu'].append(mu)
+            index['logvar'].append(logvar)
+            index['pi'].append(pi)
+            index['alpha'].append(alpha)
             
         index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
