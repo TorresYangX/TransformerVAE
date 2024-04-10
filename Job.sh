@@ -7,5 +7,5 @@
 #SBATCH --gres=gpu:1
 #SBATCH --qos=gpulab02
 
-source activate nvib
-python experiment/cityemd/Citation.py -d Porto -m LCSS
+source activate NVAE
+python Train.py --model NVAE --dataset porto
