@@ -1,7 +1,7 @@
 import os
 import time
 import torch
-import numpy as np
+import pandas as pd
 from utils import tool_funcs
 from datetime import datetime
 from model_config import ModelConfig
@@ -77,7 +77,6 @@ class Trainer:
                 
                 if ((i_batch + 1) % ModelConfig.NVAE.ACCUMULATION_STEPS == 0) or (i_batch + 1 == len(train_dataloader)):
                     optimizer.step()
-                    optimizer.zero_grad()
                 loss_ep.append(train_loss['Loss'].item())
                 train_gpu.append(tool_funcs.GPUInfo.mem()[0])
                 train_ram.append(tool_funcs.RAMInfo.mem())
@@ -168,20 +167,20 @@ class Trainer:
             pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
             alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True)
             
-            index['mu'].append(mu)
-            index['logvar'].append(logvar)
-            index['pi'].append(pi)
-            index['alpha'].append(alpha)
+            index['mu'].append(mu).cpu().detach()
+            index['logvar'].append(logvar).cpu().detach()
+            index['pi'].append(pi).cpu().detach()
+            index['alpha'].append(alpha).cpu().detach()
             
         index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         index['pi'] = torch.cat(index['pi'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         index['alpha'] = torch.cat(index['alpha'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
         
-        np.savetxt(ModelConfig.NVAE.index_dir + '/mu/{}_mu.csv'.format(tp), index['mu'].cpu().detach().numpy())
-        np.savetxt(ModelConfig.NVAE.index_dir + '/logvar/{}_sigma.csv'.format(tp), index['logvar'].cpu().detach().numpy())
-        np.savetxt(ModelConfig.NVAE.index_dir + '/pi/{}_pi.csv'.format(tp), index['pi'].cpu().detach().numpy())
-        np.savetxt(ModelConfig.NVAE.index_dir + '/alpha/{}_alpha.csv'.format(tp), index['alpha'].cpu().detach().numpy())
+        pd.DataFrame(index['mu']).to_csv(ModelConfig.NVAE.index_dir+'/mu/{}_index.csv'.format(tp), header=None, index=None)
+        pd.DataFrame(index['logvar']).to_csv(ModelConfig.NVAE.index_dir+'/logvar/{}_index.csv'.format(tp), header=None, index=None)
+        pd.DataFrame(index['pi']).to_csv(ModelConfig.NVAE.index_dir+'/pi/{}_index.csv'.format(tp), header=None, index=None)
+        pd.DataFrame(index['alpha']).to_csv(ModelConfig.NVAE.index_dir+'/alpha/{}_index.csv'.format(tp), header=None, index=None)
     
         return
 

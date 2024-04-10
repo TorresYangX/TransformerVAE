@@ -38,7 +38,7 @@ class ModelConfig:
         KL_ANNEALING_GAUSSIAN = "constant"
         KL_ANNEALING_DIRICHLET = "constant"
         
-        learning_rate = 1e-3
+        learning_rate = 1e-2
         training_lr_degrade_step = 5
         training_lr_degrade_gamma = 0.5
         training_bad_patience = 5
@@ -92,7 +92,7 @@ class ModelConfig:
         grid_num = 50
         vocab_size = grid_num * grid_num + 2
         BATCH_SIZE = 16
-        KL_WEIGHT = 1
+        KL_WEIGHT = 0.01
         
         learning_rate = 1e-5
         training_bad_patience = 10
