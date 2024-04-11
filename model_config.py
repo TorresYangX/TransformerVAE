@@ -21,9 +21,9 @@ class ModelConfig:
         sos = grid_num * grid_num
         eos = grid_num * grid_num + 1
         BATCH_SIZE = 16 #B
-        d_model = 128
+        d_model = 64
         embedding_dim = 16 # H
-        dim_forward = 512
+        dim_forward = 256
         nhead = 1
         dropout = 0.1
         activation = 'relu'
@@ -39,7 +39,7 @@ class ModelConfig:
         KL_ANNEALING_GAUSSIAN = "constant"
         KL_ANNEALING_DIRICHLET = "constant"
         
-        learning_rate = 1e-2
+        learning_rate = 1e-4
         training_lr_degrade_step = 5
         training_lr_degrade_gamma = 0.5
         training_bad_patience = 5

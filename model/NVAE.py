@@ -146,7 +146,9 @@ class TransformerNvib(nn.Module):
             kappa = ModelConfig.NVAE.KAPPA,
             delta = ModelConfig.NVAE.DELTA,
         )
-        self.decoderlinear = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.d_model)
+        self.decoderlinear_z = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.d_model)
+        self.decoderlinear_mu = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.d_model)
+        self.decoderlinear_logvar = nn.Linear(ModelConfig.NVAE.embedding_dim, ModelConfig.NVAE.d_model)
         self.transformer_decoder = TransformerDecoder()
         self.output_proj = nn.Linear(ModelConfig.NVAE.d_model, ModelConfig.NVAE.vocab_size)
         self.drop = nn.Dropout(ModelConfig.NVAE.dropout)
@@ -165,11 +167,11 @@ class TransformerNvib(nn.Module):
         tgt = self.position_embedding(tgt).to(torch.float32) 
         tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.shape[0]).to(device) 
         output = self.transformer_decoder(
-            tgt=tgt,  # [Nt,B,H] (trajectory_length+1, Batch_size, d_model) (61,64,512)
-            memory=memory,  # [Nt,B,H] (trajectory_length+1, Batch_size, d_model) (61,64,512)
+            tgt=tgt,  # [Nt,B,H] (trajectory_length+1, Batch_size, d_model) (61,16,64)
+            memory=memory, 
             tgt_mask=tgt_mask,  # [Nt,Nt] (61,61)
-            tgt_key_padding_mask=tgt_key_padding_mask,  # [B,Nt] (64,61)
-            memory_key_padding_mask=memory_key_padding_mask, # [B,Nt] (64,61)
+            tgt_key_padding_mask=tgt_key_padding_mask,  # [B,Nt] (16,61)
+            memory_key_padding_mask=memory_key_padding_mask, # [B,Nt] (16,62)
         )
         logits = self.output_proj(output)  # [Nt,B,V]
         return logits
@@ -223,17 +225,20 @@ class TransformerNvib(nn.Module):
         }
 
     def forward(self, src, tgt, src_key_padding_mask, tgt_key_padding_mask):
-        nvib_input = self.encode(src, src_key_padding_mask=src_key_padding_mask) #(trajectory_length, Batch_size, embedding_dim) (60,64,16)
+        nvib_input = self.encode(src, src_key_padding_mask=src_key_padding_mask) #(trajectory_length, Batch_size, embedding_dim) (61,16,16)
         latent_output_dict = self.nvib(nvib_input, src_key_padding_mask)
-        z_ = self.decoderlinear(latent_output_dict["z"][0]) #(trajectory_length, Batch_size, d_model) (60,64,512)
-        memory = (z_, latent_output_dict["z"][1], latent_output_dict["z"][2], latent_output_dict["z"][3])
+        # latent_output_dict["z"]: tuple(z, pi, mu, logvar), 
+        # z:(trajectory_length+1, Batch_size, embedding_dim), 
+        # pi:(trajectory_length+1, Batch_size, 1),
+        # mu:(trajectory_length+1, Batch_size, embedding_dim),
+        # logvar:(trajectory_length+1, Batch_size, embedding_dim),
+        z_ = self.decoderlinear_z(latent_output_dict["z"][0]) #(trajectory_length+1, Batch_size, d_model) (62,16,64)
+        pi = latent_output_dict["z"][1] #(trajectory_length+1, Batch_size, 1) (62,16,1)
+        mu_ = self.decoderlinear_mu(latent_output_dict["z"][2]) #(trajectory_length+1, Batch_size, d_model) (62,16,64)
+        logvar_ = self.decoderlinear_logvar(latent_output_dict["z"][3]) #(trajectory_length+1, Batch_size, d_model) (62,16,64)
+        memory = (z_, pi, mu_, logvar_)
         output = self.decode(
             tgt=tgt,
-            # latent_output_dict["z"]: tuple(z, pi, mu, logvar), 
-            # z:(trajectory_length+1, Batch_size, embedding_dim), 
-            # pi:(trajectory_length+1, Batch_size, 1), ##nan##
-            # mu:(trajectory_length+1, Batch_size, embedding_dim),
-            # logvar:(trajectory_length+1, Batch_size, embedding_dim),
             memory=memory, 
             tgt_key_padding_mask=tgt_key_padding_mask,  # [B,Nt]
             memory_key_padding_mask=latent_output_dict["memory_key_padding_mask"],
