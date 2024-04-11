@@ -65,7 +65,6 @@ class Trainer:
             
             _time_batch_start = time.time()
             for i_batch, batch in enumerate(train_dataloader):
-                print(i_batch)
                 optimizer.zero_grad()
                 batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
                 batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
@@ -163,10 +162,10 @@ class Trainer:
             batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
             
             enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
-            mu = enc_dict['mu'][:, 0, :].cpu().detach()
-            logvar = enc_dict['logvar'][:, 0, :].cpu().detach()
-            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim)[:, 0, :].cpu().detach()
-            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim)[:, 0, :].cpu().detach()
+            mu = enc_dict['mu'].mean(dim = 0, keepdim = True).cpu().detach()
+            logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True).cpu().detach()
+            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
+            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
             
             index['mu'].append(mu)
             index['logvar'].append(logvar)
