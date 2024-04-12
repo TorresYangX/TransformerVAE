@@ -47,5 +47,5 @@ if __name__ == '__main__':
     logging.info('=================================')
 
     trainer = trainer_class()
-    trainer.train()
-    # trainer.encode('test')
+    # trainer.train()
+    trainer.encode('test')
