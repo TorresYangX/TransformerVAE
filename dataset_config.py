@@ -33,6 +33,7 @@ class DatasetConfig:
     end_time = ''
     test_data_num = 0
     ground_data_timerange = []
+    traj_len = 60
     grid_size = 0.0
     grid_num = 50
     
@@ -66,7 +67,6 @@ class DatasetConfig:
             cls.min_lat = 39.75
             cls.max_lon = 116.60
             cls.max_lat = 40.05
-            cls.min_traj_len = 20
             cls.test_data_num = 50
             cls.start_time = Timestamp('2008-01-01 00:00:00')
             cls.end_time = Timestamp('2011-12-31 23:59:59')
