@@ -54,9 +54,6 @@ def pipline(dataset_name):
     total_indexs = pd.concat(total_index_dict.values(), axis=1).values
     test_indexs = pd.concat(test_index_dict.values(), axis=1).values
     
-    logging.info('total_indexs shape: %s' % str(total_indexs.shape))
-    logging.info('test_indexs shape: %s' % str(test_indexs.shape))
-    
     retrieve_trajs_file = retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name)
     
     ground_data_df = pd.read_pickle(ground_data)
