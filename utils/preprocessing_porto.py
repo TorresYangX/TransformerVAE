@@ -5,6 +5,7 @@ logging.getLogger().setLevel(logging.INFO)
 
 import os
 import time
+import random
 import numpy as np
 import pandas as pd
 from ast import literal_eval
@@ -38,6 +39,9 @@ def lonlat2grid(row):
     if min(grid_list) < 0 or max(grid_list) >= Config.grid_num * Config.grid_num:
         print('Error: grid_list out of range')
     return grid_list
+
+def sample_trajectory(trajectory, r):
+    return [point for point in trajectory if random.random() > r]
 
 
 def clean_and_output_data():
@@ -198,6 +202,27 @@ class varysize_dataset_generator(dataset_generator):
         sam_data.to_pickle(self.sam_data_path)
         logging.info('Saved db_{}K data. #traj={}'.format(int(self.db_size/1000), sam_data.shape[0]))
         logging.info('Generate db data end. @={:.0f}'.format(time.time() - _time))
+        
+
+class downsampling_dataset_generator(dataset_generator):
+    def __init__(self, ds_rate):
+        super().__init__()
+        self.sam_data_folder = Config.dataset_folder + 'ds_{}/'.format(ds_rate)
+        self.sam_data_path = self.sam_data_folder + Config.dataset_prefix + '.pkl'
+        self.sam_interpolation_path = self.sam_data_folder + Config.dataset_prefix + '_interpolation.pkl'
+        self.sam_grid_folder = self.sam_data_folder + 'grid/'
+        self.sam_lonlat_folder = self.sam_data_folder + 'lonlat/'
+        self.ds_rate = ds_rate
+        
+    def generate_sam_data(self):
+        _time = time.time()
+        os.makedirs(self.sam_data_folder, exist_ok=True)
+        sam_data = self.ori_data
+        sam_data['wgs_seq'] = sam_data['wgs_seq'].apply(lambda x: sample_trajectory(x, self.ds_rate))
+        sam_data.to_pickle(self.sam_data_path)
+        logging.info('Saved ds_{} data. #traj={}'.format(self.ds_rate, sam_data.shape[0]))
+        logging.info('Generate ds data end. @={:.0f}'.format(time.time() - _time))
+        
         
 
         
