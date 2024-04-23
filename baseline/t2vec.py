@@ -360,11 +360,6 @@ class t2vec_Trainer:
                                     shuffle = False,
                                     num_workers = 0,
                                     drop_last = True)
-            
-            self.make_indexfolder(dataset_name)
-            self.load_checkpoint()
-            self.m0.eval()
-            self.m1.eval()
         
             index = {
                 'prob': []
@@ -388,10 +383,24 @@ class t2vec_Trainer:
         
         
         db_size = [20,40,60,80,100] # dataset_size: 20K, 40K, 60K, 80K, 100K
-        ds_rate = [] # down-sampling rate: 
+        ds_rate = [0.1,0.2] # down-sampling rate: 
         dt_rate = [] # distort rate: 
+        
+        self.load_checkpoint()
+        self.m0.eval()
+        self.m1.eval()
+        
         for n_db in db_size:
             dataset_name = 'db_{}K'.format(n_db)
+            self.make_indexfolder(dataset_name)
+            encode_single(dataset_name, 'total')
+            encode_single(dataset_name, 'ground')
+            encode_single(dataset_name, 'test')
+            logging.info('[{} Encode]end.'.format(dataset_name))
+        
+        for v_ds in ds_rate:
+            dataset_name = 'ds_{}'.format(v_ds)
+            self.make_indexfolder(dataset_name)
             encode_single(dataset_name, 'total')
             encode_single(dataset_name, 'ground')
             encode_single(dataset_name, 'test')
@@ -415,6 +424,7 @@ class t2vec_Trainer:
         self.m1.load_state_dict(checkpoint_m1['m1_state_dict'])
         self.m0.to(ModelConfig.device)
         self.m1.to(ModelConfig.device)
+        logging.info('[Load m0, m1] end.')
         return
     
     def make_indexfolder(self, dataset_name):
