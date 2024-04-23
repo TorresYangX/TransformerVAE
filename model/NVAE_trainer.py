@@ -115,74 +115,75 @@ class Trainer:
             'enc_train_ram': training_ram_usage}
         
     @torch.no_grad()
-    def encode(self, tp):
+    def encode(self):
         """
         1. read best model
         2. read trajs from file, then -> embeddings
         n. varying db size, downsampling rates, and distort rates
         """
-        if tp == 'total':
-            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
-            dataloader = DataLoader(total_dataset,
-                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        elif tp == 'ground':
-            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
-            dataloader = DataLoader(ground_dataset,
-                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        elif tp == 'test':
-            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
-            dataloader = DataLoader(test_dataset,
-                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        else:
-            raise ValueError("Invalid type of dataset.")
         
-        logging.info('[Encode]start.')
-        self.make_indexfolder()
-        self.load_checkpoint()
-        self.model.eval()
-        
-        index = {
-            'mu': [],
-            'logvar': [],
-            'pi': [],
-            'alpha': []
-        }
+        def encode_single(dataset_name, tp):
+            logging.info('[{} {} Encode]start.'.format(dataset_name, tp))
+            
+            dataset = read_traj_dataset(DatasetConfig.dataset_folder+dataset_name
+                                        +'/grid/{}_{}.pkl'.format(DatasetConfig.dataset_prefix, tp))
+            dataloader = DataLoader(dataset=dataset,
+                                    batch_size = ModelConfig.NVAE.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+            
+            self.make_indexfolder(dataset_name)
+            self.load_checkpoint()
+            self.model.train()
+            
+            index = {
+                'mu': [],
+                'logvar': [],
+                'pi': [],
+                'alpha': []
+            }
 
-        for i_batch, batch in enumerate(dataloader):
-            batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
-            batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
+            for _, batch in enumerate(dataloader):
+                batch_src = torch.cat([batch, self.eos_tensor], dim = 1).transpose(0,1).to(ModelConfig.device)
+                batch_tgt = torch.cat([self.sos_tensor, batch], dim = 1).transpose(0,1).to(ModelConfig.device)
+                
+                enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
+                mu = enc_dict['mu'].mean(dim = 0, keepdim = True).cpu().detach()
+                logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True).cpu().detach()
+                pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
+                alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
+                
+                index['mu'].append(mu)
+                index['logvar'].append(logvar)
+                index['pi'].append(pi)
+                index['alpha'].append(alpha)
+                
+            index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+            index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+            index['pi'] = torch.cat(index['pi'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+            index['alpha'] = torch.cat(index['alpha'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
             
-            enc_dict = self.model(batch_src, batch_tgt, self.src_key_padding_mask, self.tgt_key_padding_mask)
-            mu = enc_dict['mu'].mean(dim = 0, keepdim = True).cpu().detach()
-            logvar = enc_dict['logvar'].mean(dim = 0, keepdim = True).cpu().detach()
-            pi = enc_dict['pi'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
-            alpha = enc_dict['alpha'].repeat(1,1,ModelConfig.NVAE.embedding_dim).mean(dim = 0, keepdim = True).cpu().detach()
             
-            index['mu'].append(mu)
-            index['logvar'].append(logvar)
-            index['pi'].append(pi)
-            index['alpha'].append(alpha)
             
-        index['mu'] = torch.cat(index['mu'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
-        index['logvar'] = torch.cat(index['logvar'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
-        index['pi'] = torch.cat(index['pi'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
-        index['alpha'] = torch.cat(index['alpha'], dim = 0).view(-1, ModelConfig.NVAE.embedding_dim)
+            pd.DataFrame(index['mu']).to_csv(ModelConfig.NVAE.index_dir+'/{}/mu/{}_index.csv'.format(dataset_name, tp), header=None, index=None)
+            pd.DataFrame(index['logvar']).to_csv(ModelConfig.NVAE.index_dir+'/{}/logvar/{}_index.csv'.format(dataset_name, tp), header=None, index=None)
+            pd.DataFrame(index['pi']).to_csv(ModelConfig.NVAE.index_dir+'/{}/pi/{}_index.csv'.format(dataset_name, tp), header=None, index=None)
+            pd.DataFrame(index['alpha']).to_csv(ModelConfig.NVAE.index_dir+'/{}/alpha/{}_index.csv'.format(dataset_name, tp), header=None, index=None)
         
-        pd.DataFrame(index['mu']).to_csv(ModelConfig.NVAE.index_dir+'/mu/{}_index.csv'.format(tp), header=None, index=None)
-        pd.DataFrame(index['logvar']).to_csv(ModelConfig.NVAE.index_dir+'/logvar/{}_index.csv'.format(tp), header=None, index=None)
-        pd.DataFrame(index['pi']).to_csv(ModelConfig.NVAE.index_dir+'/pi/{}_index.csv'.format(tp), header=None, index=None)
-        pd.DataFrame(index['alpha']).to_csv(ModelConfig.NVAE.index_dir+'/alpha/{}_index.csv'.format(tp), header=None, index=None)
-    
-        return
+            return
+        
+        db_size = [20] # dataset_size: 20K
+        ds_rate = [] # down-sampling rate: 
+        dt_rate = [] # distort rate: 
+        for n_db in db_size:
+            dataset_name = 'db_{}K'.format(n_db)
+            encode_single(dataset_name, 'total')
+            encode_single(dataset_name, 'ground')
+            encode_single(dataset_name, 'test')
+            logging.info('[{} Encode]end.'.format(dataset_name))
+            
+        
 
                       
               
@@ -197,10 +198,10 @@ class Trainer:
         self.model.to(ModelConfig.device)
         return
     
-    def make_indexfolder(self):
-        if not os.path.exists(ModelConfig.NVAE.index_dir+'/mu'):
-            os.mkdir(ModelConfig.NVAE.index_dir+'/mu')
-            os.mkdir(ModelConfig.NVAE.index_dir+'/logvar')
-            os.mkdir(ModelConfig.NVAE.index_dir+'/pi')
-            os.mkdir(ModelConfig.NVAE.index_dir+'/alpha')
+    def make_indexfolder(self, dataset_name):
+        folders = ['mu', 'logvar', 'pi', 'alpha']
+        base_dir = ModelConfig.NVAE.index_dir + '/{}/'.format(dataset_name)
+        
+        for folder in folders:
+            os.makedirs(base_dir + folder, exist_ok=True)
         return
