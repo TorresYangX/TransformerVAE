@@ -109,12 +109,12 @@ class dataset_generator:
         
         # ground_data
         ground_data = dfraw[(dfraw['timestamp'] >= Config.ground_data_timerange[0]) & (dfraw['timestamp'] <= Config.ground_data_timerange[1])]
-        ground_data.to_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_ground_data.pkl')
+        ground_data.to_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_ground.pkl')
         logging.info('Saved ground_data_file. #traj={}'.format(ground_data.shape[0]))
         
         # sample test_data
         test_data = ground_data.sample(n=Config.test_data_num)
-        test_data.to_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_test_data.pkl')
+        test_data.to_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_test.pkl')
         logging.info('Saved test_data_file. #traj={}'.format(test_data.shape[0]))
         
         logging.info('Generate lonlat data end. @={:.0f}'.format(time.time() - _time))
@@ -134,19 +134,19 @@ class dataset_generator:
         logging.info('Saved grid_total_file. #traj={}'.format(dfraw.shape[0]))
         
         # ground_data
-        ground_data  = pd.read_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_ground_data.pkl')
+        ground_data  = pd.read_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_ground.pkl')
         ground_data = ground_data[['TAXI_ID', 'wgs_seq', 'timestamp']]
         ground_data['grid_seq'] = ground_data.apply(lonlat2grid, axis=1)
         ground_data =  ground_data.reset_index(drop=True)
-        ground_data.to_pickle(self.sam_grid_folder + Config.dataset_prefix + '_ground_data.pkl')
+        ground_data.to_pickle(self.sam_grid_folder + Config.dataset_prefix + '_ground.pkl')
         logging.info('Saved grid_ground_file. #traj={}'.format(ground_data.shape[0]))
         
         # test_data
-        test_data = pd.read_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_test_data.pkl')
+        test_data = pd.read_pickle(self.sam_lonlat_folder + Config.dataset_prefix + '_test.pkl')
         test_data = test_data[['TAXI_ID', 'wgs_seq', 'timestamp']]
         test_data['grid_seq'] = test_data.apply(lonlat2grid, axis=1)
         test_data = test_data.reset_index(drop=True)
-        test_data.to_pickle(self.sam_grid_folder + Config.dataset_prefix + '_test_data.pkl')
+        test_data.to_pickle(self.sam_grid_folder + Config.dataset_prefix + '_test.pkl')
         logging.info('Saved grid_test_file. #traj={}'.format(test_data.shape[0]))
 
         logging.info('Generate grid data end. @={:.0f}'.format(time.time() - _time))
@@ -184,7 +184,7 @@ class train_dataset_generator(dataset_generator):
 class varysize_dataset_generator(dataset_generator):
     def __init__(self, db_size):
         super().__init__()
-        self.sam_data_folder = Config.dataset_folder + 'db_{}/'.format(db_size)
+        self.sam_data_folder = Config.dataset_folder + 'db_{}K/'.format(int(db_size/1000))
         self.sam_data_path = self.sam_data_folder + Config.dataset_prefix + '.pkl'
         self.sam_interpolation_path = self.sam_data_folder + Config.dataset_prefix + '_interpolation.pkl'
         self.sam_grid_folder = self.sam_data_folder + 'grid/'
@@ -196,7 +196,7 @@ class varysize_dataset_generator(dataset_generator):
         os.makedirs(self.sam_data_folder, exist_ok=True)
         sam_data = self.ori_data.sample(n=self.db_size)
         sam_data.to_pickle(self.sam_data_path)
-        logging.info('Saved db_{} data. #traj={}'.format(self.db_size, sam_data.shape[0]))
+        logging.info('Saved db_{}K data. #traj={}'.format(int(self.db_size/1000), sam_data.shape[0]))
         logging.info('Generate db data end. @={:.0f}'.format(time.time() - _time))
         
 
