@@ -173,7 +173,7 @@ class Trainer:
         
             return
         
-        db_size = [20] # dataset_size: 20K
+        db_size = [20,40,60,80,100] # dataset_size: 20K, 40K, 60K, 80K, 100K
         ds_rate = [] # down-sampling rate: 
         dt_rate = [] # distort rate: 
         for n_db in db_size:
