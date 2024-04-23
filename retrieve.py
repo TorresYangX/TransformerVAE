@@ -96,7 +96,7 @@ if __name__ == '__main__':
     os.makedirs(retrieve_folder, exist_ok=True)
     
     db_size = [20,40,60,80,100]
-    ds_rate = []
+    ds_rate = [0.1,0.2]
     dt_rate = []
     
     for n_db in db_size:
