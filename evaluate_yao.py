@@ -321,7 +321,7 @@ if __name__ == "__main__":
     logging.info("mass similarity(NMD):"+str(1-rs[0]/(rs[1]+rs[2])))
     logging.info("incluveness(NMA):"+str(1-math.acos(round(rs[1]*rs[1]+rs[2]*rs[2]-rs[0]*rs[0],8)/round(2*rs[1]*rs[2],8))/math.acos(-1)))
     logging.info("structure similarity(RRNSA):"+str(1-math.acos(round(rs[4]*rs[4]+rs[5]*rs[5]-rs[3]*rs[3],8)/round(2*rs[4]*rs[5],8))/math.acos(-1)))
-    with open(yao_folder+'/MD_NMD.csv', 'w') as f:
+    with open(yao_folder+'/MD_NMD_{}.csv'.format(dataset_name), 'w') as f:
         f.write("mass difference(MD):"+str(rs[0])+"\n")
         f.write("mass similarity(NMD):"+str(1-rs[0]/(rs[1]+rs[2]))+"\n")
         f.write("incluveness(NMA):"+str(1-math.acos(round(rs[1]*rs[1]+rs[2]*rs[2]-rs[0]*rs[0],8)/round(2*rs[1]*rs[2],8))/math.acos(-1))+"\n")
