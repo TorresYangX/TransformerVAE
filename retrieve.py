@@ -44,6 +44,8 @@ def save_retr_traj(retr_file, total_data, solution):
     
     
 def pipline(dataset_name):
+    logging.info('[%s retrieve] Start' % dataset_name)
+    
     total_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_total.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
     ground_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
     test_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_test.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     
     os.makedirs(retrieve_folder, exist_ok=True)
     
-    db_size = [20]
+    db_size = [20,40,60,80,100]
     ds_rate = []
     dt_rate = []
     
