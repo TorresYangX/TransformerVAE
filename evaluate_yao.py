@@ -158,7 +158,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, help='')
     parser.add_argument("--dataset", type=str, help='')
-    
+    parser.add_argument("--dname", type=str, help='')
     args = parser.parse_args()
     return args
 
@@ -176,16 +176,15 @@ if __name__ == "__main__":
     if args.model not in model_mapping:
         raise ValueError('model not found')
     config_class = model_mapping[args.model]['config']
+    dataset_name = args.dname
+
     
-    emd_folder = config_class.checkpoint_dir + '/emd'
+    retrieve_folder = config_class.checkpoint_dir + '/retrieve'
     yao_folder = config_class.checkpoint_dir + '/yao'
-    
-#======================================================================
-    #opop = np.ones((4,4,4,4)) # input 1, format should be (n,n,n,n)
-    #ospop = np.ones((4,4,4,4)) # input 2, format should be (n,n,n,n)
-    opop = get_OD_matrix(emd_folder+'/retrieve_trajs.pkl')
-    ospop = get_OD_matrix(DatasetConfig.lonlat_ground_file)
-#======================================================================
+
+    opop = get_OD_matrix(retrieve_folder+'/retr_trajs_{}.pkl'.format(dataset_name))
+    ospop = get_OD_matrix(DatasetConfig.dataset_folder + 
+                          '{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
     gridsize = len(opop)
     logging.info("gridsize:"+str(gridsize))
 
@@ -329,4 +328,4 @@ if __name__ == "__main__":
         f.write("structure similarity(RRNSA):"+str(1-math.acos(round(rs[4]*rs[4]+rs[5]*rs[5]-rs[3]*rs[3],8)/round(2*rs[4]*rs[5],8))/math.acos(-1))+"\n")
         f.write("shift proportion(SP):"+str(rs[6])+"\n")
     f.close()
-    logging.info('[Save] to:'+yao_folder+'/MD_NMD.csv')
+    logging.info('[Save] to:'+yao_folder+'/MD_NMD_{}.csv'.format(dataset_name))
