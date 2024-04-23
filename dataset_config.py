@@ -78,18 +78,7 @@ class DatasetConfig:
             pass
         
         cls.dataset_folder = cls.root_dir + '/data/' + cls.dataset_prefix + '/'
-        cls.grid_folder = cls.dataset_folder + 'grid/'
-        cls.lonlat_folder = cls.dataset_folder + 'lonlat/'
         cls.dataset_file = cls.dataset_folder + cls.dataset_prefix + '.pkl'
-        cls.intepolation_file = cls.dataset_folder + cls.dataset_prefix + '_interpolation.pkl'
-        
-        cls.lonlat_total_file = cls.lonlat_folder + cls.dataset_prefix + '_total.pkl'
-        cls.lonlat_ground_file = cls.lonlat_folder + cls.dataset_prefix + '_ground_data.pkl'
-        cls.lonlat_test_file = cls.lonlat_folder + cls.dataset_prefix + '_test_data.pkl'
-        
-        cls.grid_total_file = cls.grid_folder + cls.dataset_prefix + '_total.pkl'
-        cls.grid_ground_file = cls.grid_folder + cls.dataset_prefix + '_ground_data.pkl'
-        cls.grid_test_file = cls.grid_folder + cls.dataset_prefix + '_test_data.pkl'
          
     @classmethod
     def to_str(cls): # __str__, self
