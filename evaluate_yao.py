@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     opop = get_OD_matrix(retrieve_folder+'/retr_trajs_{}.pkl'.format(dataset_name))
     ospop = get_OD_matrix(DatasetConfig.dataset_folder + 
-                          '{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
+                          'train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix))
     gridsize = len(opop)
     logging.info("gridsize:"+str(gridsize))
 
