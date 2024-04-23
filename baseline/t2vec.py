@@ -348,58 +348,55 @@ class t2vec_Trainer:
         return train_loss.div(len(train_loader.dataset))
     
     
-    def encode(self, tp):
-        if tp == 'total':
-            total_dataset = read_traj_dataset(DatasetConfig.grid_total_file)
-            dataloader = DataLoader(total_dataset,
-                                    batch_size = ModelConfig.t2vec.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        elif tp == 'ground':
-            ground_dataset = read_traj_dataset(DatasetConfig.grid_ground_file)
-            dataloader = DataLoader(ground_dataset,
-                                    batch_size = ModelConfig.t2vec.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        elif tp == 'test':
-            test_dataset = read_traj_dataset(DatasetConfig.grid_test_file)
-            dataloader = DataLoader(test_dataset,
-                                    batch_size = ModelConfig.t2vec.BATCH_SIZE,
-                                    shuffle = False,
-                                    num_workers = 0,
-                                    drop_last = True)
-        else:
-            raise ValueError("Invalid type of dataset.")
+    def encode(self):
         
-        logging.info('[Encode]start.')
-        self.make_indexfolder()
-        self.load_checkpoint()
-        self.m0.eval()
-        self.m1.eval()
-        
-        index = {
-            'prob': []
-        }
-        
-        for i_batch, batch in enumerate(dataloader):
-            batch = batch.transpose(0,1).to(ModelConfig.device)
-            eos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.EOS).to(ModelConfig.device) # eos = 2500
-            sos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.BOS).to(ModelConfig.device) # sos = 2501
-            src = torch.cat([batch, eos], dim=0)
-            tgt = torch.cat([sos, batch], dim=0)
-            src = src.long()
-            lengths = torch.full((1, batch.shape[1]), batch.shape[0]).to(ModelConfig.device)
-            tgt = tgt.long()
-            _, decoder_h0 = self.m0(src, lengths, tgt)
-            idx = decoder_h0.mean(dim=0)
-            index['prob'].append(idx)
+        def encode_single(dataset_name, tp):
+            logging.info('[{} {} Encode]start.'.format(dataset_name, tp))
             
-        index['prob'] = torch.cat(index['prob'], dim=0).view(-1, ModelConfig.t2vec.hidden_dim).cpu().detach().numpy()
-        pd.DataFrame(index['prob']).to_csv(ModelConfig.t2vec.index_dir+'/prob/{}_index.csv'.format(tp), header=None, index=None)
+            dataset = read_traj_dataset(DatasetConfig.dataset_folder+dataset_name
+                                        +'/grid/{}_{}.pkl'.format(DatasetConfig.dataset_prefix, tp))
+            dataloader = DataLoader(dataset=dataset,
+                                    batch_size = ModelConfig.t2vec.BATCH_SIZE,
+                                    shuffle = False,
+                                    num_workers = 0,
+                                    drop_last = True)
+            
+            self.make_indexfolder(dataset_name)
+            self.load_checkpoint()
+            self.m0.eval()
+            self.m1.eval()
+        
+            index = {
+                'prob': []
+            }
+        
+            for _, batch in enumerate(dataloader):
+                batch = batch.transpose(0,1).to(ModelConfig.device)
+                eos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.EOS).to(ModelConfig.device) # eos = 2500
+                sos = torch.full((1, batch.shape[1]), ModelConfig.t2vec.BOS).to(ModelConfig.device) # sos = 2501
+                src = torch.cat([batch, eos], dim=0)
+                tgt = torch.cat([sos, batch], dim=0)
+                src = src.long()
+                lengths = torch.full((1, batch.shape[1]), batch.shape[0]).to(ModelConfig.device)
+                tgt = tgt.long()
+                _, decoder_h0 = self.m0(src, lengths, tgt)
+                idx = decoder_h0.mean(dim=0)
+                index['prob'].append(idx)
+                
+            index['prob'] = torch.cat(index['prob'], dim=0).view(-1, ModelConfig.t2vec.hidden_dim).cpu().detach().numpy()
+            pd.DataFrame(index['prob']).to_csv(ModelConfig.t2vec.index_dir+'/{}/prob/{}_index.csv'.format(dataset_name, tp), header=None, index=None)
         
         
+        db_size = [20] # dataset_size: 20K
+        ds_rate = [] # down-sampling rate: 
+        dt_rate = [] # distort rate: 
+        for n_db in db_size:
+            dataset_name = 'db_{}K'.format(n_db)
+            encode_single(dataset_name, 'total')
+            encode_single(dataset_name, 'ground')
+            encode_single(dataset_name, 'test')
+            logging.info('[{} Encode]end.'.format(dataset_name))
+            
     
     
 
@@ -420,7 +417,10 @@ class t2vec_Trainer:
         self.m1.to(ModelConfig.device)
         return
     
-    def make_indexfolder(self):
-        if not os.path.exists(ModelConfig.t2vec.index_dir+'/prob'):
-            os.mkdir(ModelConfig.t2vec.index_dir+'/prob')
+    def make_indexfolder(self, dataset_name):
+        folders = ['prob']
+        base_dir = ModelConfig.t2vec.index_dir + '/{}/'.format(dataset_name)
+        
+        for folder in folders:
+            os.makedirs(base_dir + folder, exist_ok=True)
         return
