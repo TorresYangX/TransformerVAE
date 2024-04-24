@@ -18,11 +18,13 @@ def data_index_load(model_config, dataset_name, total_data_path, test_data_path)
     test_data = test_data.reset_index(drop=True)
     
     total_index_dict = {}
-    test_index_dict = {}
-    index_root_folder = model_config.index_dir + '/{}/'.format(dataset_name)
-    for dirs in os.listdir(index_root_folder):
-        total_index_dict[dirs] = pd.read_csv(index_root_folder + dirs + '/total_index.csv', header=None)
-        test_index_dict[dirs]=pd.read_csv(index_root_folder + dirs + '/test_index.csv', header=None)
+    test_index_dict = {} 
+    total_index_root_folder = model_config.index_dir + '/train/' # for ds and dt, db is different
+    test_index_root_folder = model_config.index_dir + '/{}/'.format(dataset_name)
+    for dirs in os.listdir(total_index_root_folder):
+        total_index_dict[dirs] = pd.read_csv(total_index_root_folder + dirs + '/total_index.csv', header=None)
+    for dirs in os.listdir(test_index_root_folder):
+        test_index_dict[dirs] = pd.read_csv(test_index_root_folder + dirs + '/test_index.csv', header=None)
     return total_data, test_data, total_index_dict, test_index_dict
 
 def retrieve(total_indexs, test_indexs, retr_num, retr_file, total_data):
@@ -46,8 +48,8 @@ def save_retr_traj(retr_file, total_data, solution):
 def pipline(dataset_name):
     logging.info('[%s retrieve] Start' % dataset_name)
     
-    total_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_total.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
-    ground_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
+    total_data = DatasetConfig.dataset_folder + '/train/lonlat/{}_total.pkl'.format(DatasetConfig.dataset_prefix) # for ds and dt, db is different
+    ground_data = DatasetConfig.dataset_folder + '/train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix) # for ds and dt, db is different
     test_data = DatasetConfig.dataset_folder + '/{}/lonlat/{}_test.pkl'.format(dataset_name, DatasetConfig.dataset_prefix)
     
     total_data, test_data, total_index_dict, test_index_dict = data_index_load(config_class, dataset_name, total_data, test_data)
@@ -96,17 +98,17 @@ if __name__ == '__main__':
     os.makedirs(retrieve_folder, exist_ok=True)
     
     db_size = [20,40,60,80,100]
-    ds_rate = [0.1,0.2]
+    ds_rate = [0.1,0.2,0.3,0.4,0.5]
     dt_rate = []
     
-    for n_db in db_size:
-        dataset_name = 'db_{}K'.format(n_db)
-        pipline(dataset_name)
+    # for n_db in db_size:
+    #     dataset_name = 'db_{}K'.format(n_db)
+    #     pipline(dataset_name)
     
     for v_ds in ds_rate:
         dataset_name = 'ds_{}'.format(v_ds)
         pipline(dataset_name)
         
-    for v_dt in dt_rate:
-        dataset_name = 'dt_{}'.format(v_dt)
-        pipline(dataset_name)
+    # for v_dt in dt_rate:
+    #     dataset_name = 'dt_{}'.format(v_dt)
+    #     pipline(dataset_name)

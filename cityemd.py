@@ -81,16 +81,25 @@ if __name__ == '__main__':
     emd_folder = config_class.checkpoint_dir + '/emd'
     os.makedirs(emd_folder, exist_ok=True)
     
-    db_size = [20,40,60,80]
-    ds_rate = []
+    db_size = [20,40,60,80,100]
+    ds_rate = [0.1, 0.2, 0.3, 0.4, 0.5]
     dt_rate = []
     
-    for n_db in db_size:
-        dataset_name = 'db_{}K'.format(n_db)
+    # for n_db in db_size:
+    #     dataset_name = 'db_{}K'.format(n_db)
+    #     logging.info('%s start' % dataset_name)
+    #     retrieve_trajs = pd.read_pickle(retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name))
+    #     ground_trajs = pd.read_pickle(DatasetConfig.dataset_folder 
+    #                                   +'/{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
+    #     ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
+    #     cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
+    
+    for v_ds in ds_rate:
+        dataset_name = 'ds_{}'.format(v_ds)
         logging.info('%s start' % dataset_name)
         retrieve_trajs = pd.read_pickle(retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name))
         ground_trajs = pd.read_pickle(DatasetConfig.dataset_folder 
-                                      +'/{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
+                                      +'/train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix)) # for ds and dt, db is different
         ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
         cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
     
