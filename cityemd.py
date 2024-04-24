@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 import argparse
@@ -9,7 +10,7 @@ from dataset_config import DatasetConfig
 
 logging.getLogger().setLevel(logging.INFO)
 
-def cityEMD(ground_trajs, reterieved_trajs, emd_folder, NLAT=50, NLON=50):
+def cityEMD(ground_trajs, reterieved_trajs, emd_folder, dataset_name, NLAT=50, NLON=50):
     
     def normalize(trajectories):
         wgs_seq = np.array(trajectories['wgs_seq'].tolist())
@@ -48,7 +49,7 @@ def cityEMD(ground_trajs, reterieved_trajs, emd_folder, NLAT=50, NLON=50):
     logging.info('[EMD Compute] start')
     emd_ = compute_emd(flowReal, flowRetrieved)
     logging.info('EMD: {}'.format(emd_))
-    np.save(emd_folder+'/emd.npy', emd_)
+    np.save(emd_folder+'/emd_{}.npy'.format(dataset_name), emd_)
 
     logging.info('normalize time: {:.2f}s, flow time: {:.2f}s, emd time: {:.2f}s'.format(n_time-s_time, f_time-n_time, time.time()-f_time))
     return
@@ -58,7 +59,6 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, help='')
     parser.add_argument("--dataset", type=str, help='')
-    
     args = parser.parse_args()
     return args
 
@@ -77,11 +77,20 @@ if __name__ == '__main__':
         raise ValueError('model not found')
     config_class = model_mapping[args.model]['config']
     
+    retrieve_folder = config_class.checkpoint_dir + '/retrieve'
     emd_folder = config_class.checkpoint_dir + '/emd'
+    os.makedirs(emd_folder, exist_ok=True)
     
-    retrieve_trajs = pd.read_pickle(emd_folder + '/retrieve_trajs.pkl')
-    ground_trajs = pd.read_pickle(DatasetConfig.lonlat_ground_file)
-    ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
+    db_size = [20,40,60,80]
+    ds_rate = []
+    dt_rate = []
     
-    cityEMD(ground_trajs, retrieve_trajs, emd_folder)
+    for n_db in db_size:
+        dataset_name = 'db_{}K'.format(n_db)
+        logging.info('%s start' % dataset_name)
+        retrieve_trajs = pd.read_pickle(retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name))
+        ground_trajs = pd.read_pickle(DatasetConfig.dataset_folder 
+                                      +'/{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
+        ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
+        cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
     
