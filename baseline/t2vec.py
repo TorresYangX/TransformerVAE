@@ -383,28 +383,34 @@ class t2vec_Trainer:
         
         
         db_size = [20,40,60,80,100] # dataset_size: 20K, 40K, 60K, 80K, 100K
-        ds_rate = [0.1,0.2] # down-sampling rate: 
+        ds_rate = [0.3,0.4,0.5] # down-sampling rate: 
         dt_rate = [] # distort rate: 
         
         self.load_checkpoint()
         self.m0.eval()
         self.m1.eval()
         
-        for n_db in db_size:
-            dataset_name = 'db_{}K'.format(n_db)
-            self.make_indexfolder(dataset_name)
-            encode_single(dataset_name, 'total')
-            encode_single(dataset_name, 'ground')
-            encode_single(dataset_name, 'test')
-            logging.info('[{} Encode]end.'.format(dataset_name))
+        # original dataset
+        dataset_name = 'train'
+        self.make_indexfolder(dataset_name)
+        encode_single(dataset_name, 'total')
+        logging.info('[{} Encode]end.'.format(dataset_name))
         
-        for v_ds in ds_rate:
-            dataset_name = 'ds_{}'.format(v_ds)
-            self.make_indexfolder(dataset_name)
-            encode_single(dataset_name, 'total')
-            encode_single(dataset_name, 'ground')
-            encode_single(dataset_name, 'test')
-            logging.info('[{} Encode]end.'.format(dataset_name))
+        # for n_db in db_size:
+        #     dataset_name = 'db_{}K'.format(n_db)
+        #     self.make_indexfolder(dataset_name)
+        #     encode_single(dataset_name, 'total')
+        #     encode_single(dataset_name, 'ground')
+        #     encode_single(dataset_name, 'test')
+        #     logging.info('[{} Encode]end.'.format(dataset_name))
+        
+        # for v_ds in ds_rate:
+        #     dataset_name = 'ds_{}'.format(v_ds)
+        #     self.make_indexfolder(dataset_name)
+        #     encode_single(dataset_name, 'total')
+        #     encode_single(dataset_name, 'ground')
+        #     encode_single(dataset_name, 'test')
+        #     logging.info('[{} Encode]end.'.format(dataset_name))
             
     
     
