@@ -171,7 +171,9 @@ if __name__ == "__main__":
         'AE': {'config': ModelConfig.AE},
         'VAE': {'config': ModelConfig.VAE},
         'Transformer': {'config': ModelConfig.Transformer},
-        't2vec': {'config': ModelConfig.t2vec}
+        't2vec': {'config': ModelConfig.t2vec},
+        'EDR': {'config': ModelConfig.EDR},
+        'EDwP': {'config': ModelConfig.EDwP},
     }
     if args.model not in model_mapping:
         raise ValueError('model not found')
@@ -183,8 +185,15 @@ if __name__ == "__main__":
     yao_folder = config_class.checkpoint_dir + '/yao'
 
     opop = get_OD_matrix(retrieve_folder+'/retr_trajs_{}.pkl'.format(dataset_name))
-    ospop = get_OD_matrix(DatasetConfig.dataset_folder + 
-                          'train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix)) # for ds and dt, db is different
+    if 'db' in dataset_name:
+        logging.info("db_dataset_name:"+dataset_name)
+        ospop = get_OD_matrix(DatasetConfig.dataset_folder + 
+                          '{}/lonlat/{}_ground.pkl'.format(dataset_name, DatasetConfig.dataset_prefix))
+    else:
+        logging.info("ds/dt_dataset_name:"+dataset_name)
+        ospop = get_OD_matrix(DatasetConfig.dataset_folder + 
+                            'train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix)) # for ds and dt, db is different
+    
     gridsize = len(opop)
     logging.info("gridsize:"+str(gridsize))
 
