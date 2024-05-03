@@ -179,3 +179,30 @@ class ModelConfig:
                             dic.items() \
                             ))
             return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+
+    class EDR:
+        checkpoint_dir = 'exp/{}/EDR'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls):
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+    class EDwP:
+        checkpoint_dir = 'exp/{}/EDwP'.format(DatasetConfig.dataset)
+        
+        @classmethod
+        def to_str(cls):
+            dic = cls.__dict__.copy()
+            lst = list(filter( \
+                            lambda p: (not p[0].startswith('__')) and type(p[1]) != classmethod, \
+                            dic.items() \
+                            ))
+            return '\n'.join([str(k) + ' = ' + str(v) for k, v in lst])
+        
+        
