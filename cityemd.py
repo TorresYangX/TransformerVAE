@@ -96,12 +96,12 @@ if __name__ == '__main__':
         ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
         cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
     
-    # for v_ds in ds_rate:
-    #     dataset_name = 'ds_{}'.format(v_ds)
-    #     logging.info('%s start' % dataset_name)
-    #     retrieve_trajs = pd.read_pickle(retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name))
-    #     ground_trajs = pd.read_pickle(DatasetConfig.dataset_folder 
-    #                                   +'/train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix)) # for ds and dt, db is different
-    #     ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
-    #     cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
+    for v_ds in ds_rate:
+        dataset_name = 'ds_{}'.format(v_ds)
+        logging.info('%s start' % dataset_name)
+        retrieve_trajs = pd.read_pickle(retrieve_folder + '/retr_trajs_{}.pkl'.format(dataset_name))
+        ground_trajs = pd.read_pickle(DatasetConfig.dataset_folder 
+                                      +'/train/lonlat/{}_ground.pkl'.format(DatasetConfig.dataset_prefix)) # for ds and dt, db is different
+        ground_trajs = ground_trajs.iloc[:retrieve_trajs.shape[0]]
+        cityEMD(ground_trajs, retrieve_trajs, emd_folder, dataset_name)
     
