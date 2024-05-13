@@ -1,5 +1,22 @@
 # Reconstructing Trajectories with Transformer Variational AutoEncoder
 
+## TimeLine
+- Dataset process: Geolife and Porto (done)
+- NVAE model (done)
+- baseline model:
+    - EDR (done)
+    - EDwP (done)
+    - t2vec (done)
+    - TrjSR
+    - E2DTC
+    - TrajCL
+- metric:
+    - cityemd (done)
+    - NMD (done)
+    - NMA (done)
+    - RRNSA (done)
+
+
 ## Installation
 
 - Python 3.9
