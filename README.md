@@ -28,7 +28,7 @@
 
   *NB* This environment also installs the nvib package which is assumed to be in a directory one level above the current directory.
 
-- Dataset can be downloaded from: [Geolife](https://www.microsoft.com/en-us/research/publication/geolife-gps-trajectory-dataset-user-guide/) and [Porto](https://tianchi.aliyun.com/dataset/94216).
+- Original datasets can be downloaded from: [Geolife](https://www.microsoft.com/en-us/research/publication/geolife-gps-trajectory-dataset-user-guide/) and [Porto](https://tianchi.aliyun.com/dataset/94216). The preprocessed dataset can be downloaded from [here](https://drive.google.com/file/d/1sr3yt2e-Ry-ISACWkAutVceIPnZs1n5q/view?usp=sharing)
 
 ## Quick Start
 
